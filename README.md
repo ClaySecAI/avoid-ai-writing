@@ -23,6 +23,8 @@ A portable writing skill for [Claude Code](https://docs.anthropic.com/en/docs/cl
 
 An optional **voice profile** (casual / professional / technical / warm / blunt) sets how the prose should sound, independent of the audience context profile.
 
+An optional **house-style layer** (`--style none | cmos | apa`) makes the text mechanically correct under a style guide on top of the de-AI-ing pass — *The Chicago Manual of Style* (18th ed.) or the *Publication Manual of the APA* (7th ed.). It defaults to `none`, which leaves the skill's behavior unchanged; setting `cmos` or `apa` adds punctuation, capitalization, number, hyphenation, quotation, and citation rules, and reconciles the few places a style guide and the AI-ism rules disagree (most notably the em dash, which Chicago and APA use deliberately). See the **House style** section in [`SKILL.md`](./SKILL.md).
+
 ## Quick demo
 
 **Input:**

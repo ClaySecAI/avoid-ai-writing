@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 
 ---
 
+## [3.21.0] — 2026-07-30
+
+### Added
+
+An optional house-style layer, selectable with `--style none | cmos | apa`, so the skill can copyedit to a style guide while still removing AI-isms. Additive and backward-compatible: `--style none` is the default and leaves every existing rule, mode, profile, and output unchanged. No detection categories or word-table entries were added, so the CI-enforced counts (60 categories / 112 words) are unchanged. The skill remains a single `SKILL.md`.
+
+- **`--style cmos`** — *The Chicago Manual of Style*, 18th ed. Adds a CMOS rules section: serial comma; em/en dash usage; the 18th-edition colon-capitalization, hyphenation (*ebook*, *then–vice president*), and capitalization updates (*former President Carter*, *Indigenous*, regional terms); the general number rule (spell out zero–one hundred); italics vs. quotation marks for titles; singular *they*; and both documentation systems (notes-bibliography and author-date) with the 18th-ed. changes (no place of publication, repeated author names, revised *et al.* limits).
+- **`--style apa`** — *Publication Manual of the APA*, 7th ed. Adds an APA rules section: the spell-out-below-10 number rule and its numeral exceptions; APA title case (capitalize words of four+ letters) and the sentence-case reference-list titles; five heading levels; author-date citations with `et al.` from the first citation for 3+ authors and up to 20 names in the reference list; DOIs as links; singular *they*; and bias-free-language requirements.
+- **Conflict resolution.** When a style is active, three AI-ism rules are reconciled in the guide's favor — the em dash (used deliberately, not driven to zero; the AI *habit* of stacking em-dash clauses is still flagged), title-case headings (allowed, per each guide's rules), and curly vs. straight quotes (curly required in published prose) — plus the serial comma is enforced. A contrast table keeps CMOS and APA rules (number thresholds, title-case prepositions, reference-list capitalization, citation systems, percent style) from cross-contaminating.
+- **Style detection.** Auto-detects the guide from citation/manuscript cues (footnotes + bibliography → CMOS; `(Author, Year)` + a References list + DOIs → APA; casual copy → none), overridable by explicit request.
+
+---
+
 ## [3.20.0] — 2026-07-29
 
 ### Added

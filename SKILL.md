@@ -1,7 +1,7 @@
 ---
 name: avoid-ai-writing
-description: Audit and rewrite content to remove AI writing patterns ("AI-isms"). Use this skill when asked to "remove AI-isms," "clean up AI writing," "edit writing for AI patterns," "audit writing for AI tells," or "make this sound less like AI." Supports a detect-only mode, an edit-in-place mode for files, an optional voice profile (casual / professional / technical / warm / blunt), and an iterate-to-convergence pass.
-version: 3.20.0
+description: Audit and rewrite content to remove AI writing patterns ("AI-isms"). Use this skill when asked to "remove AI-isms," "clean up AI writing," "edit writing for AI patterns," "audit writing for AI tells," or "make this sound less like AI," and also when asked to copyedit to a house style — "edit in Chicago style," "make this CMOS-compliant," "put this in APA," "APA 7th edition." Supports a detect-only mode, an edit-in-place mode for files, an optional voice profile (casual / professional / technical / warm / blunt), an optional house-style layer (--style none | cmos | apa), and an iterate-to-convergence pass.
+version: 3.21.0
 license: MIT
 compatibility: Any AI coding assistant that supports agentskills.io SKILL.md format (Claude Code, Cursor, VS Code Copilot, Hermes Agent, OpenHands, etc.) or OpenClaw. No external tools or APIs required.
 metadata:
@@ -40,7 +40,7 @@ This skill operates in one of three modes:
 
 Trigger detect mode when the user says "detect," "flag only," "audit only," "just flag," "scan," "what AI patterns are in this," or similar. Trigger edit mode when the user names a file and asks you to fix or clean it in place. Default to rewrite mode if not specified.
 
-**Invocation.** Natural language is enough ("rewrite this in a blunt voice for LinkedIn," "edit `post.md` in place," "scan this, don't rewrite"). Power users can also pass explicit options, which map to the sections below: `[--mode rewrite|detect|edit]`, `[--voice casual|professional|technical|warm|blunt]`, `[--context linkedin|blog|technical-blog|investor-email|docs|casual]`, `[--file PATH]`, `[--iterate N]` (max 2).
+**Invocation.** Natural language is enough ("rewrite this in a blunt voice for LinkedIn," "edit `post.md` in place," "scan this, don't rewrite"). Power users can also pass explicit options, which map to the sections below: `[--mode rewrite|detect|edit]`, `[--style none|cmos|apa]`, `[--voice casual|professional|technical|warm|blunt]`, `[--context linkedin|blog|technical-blog|investor-email|docs|casual]`, `[--file PATH]`, `[--iterate N]` (max 2).
 
 **Iterate to convergence (optional).** Rewrite mode already runs one corrective second pass (see Output format) — that built-in pass *is* pass 2, so `--iterate` does not stack on top of it. When the writer asks to "iterate," "keep going until it's clean," or passes `--iterate N`, repeat the audit→rewrite cycle until no patterns remain or **N passes** are reached. Cap **N at 2**: a rewrite plus one corrective pass clears the flagged patterns, and a third pass costs a full regeneration while rarely finding more. Report how many passes it took ("converged in 2 passes").
 
@@ -62,6 +62,38 @@ In **edit** mode, your job is to:
 1. **Read** the file the writer named
 2. **Edit in place**: apply minimal, targeted fixes to the flagged spans with the Edit tool, leaving already-human passages untouched
 3. **Verify**: re-read the file and confirm the flagged patterns are resolved; report what you changed
+
+---
+
+## House style (optional): `--style none | cmos | apa`
+
+The rules in this skill remove AI-isms — a *voice* concern. Layered on top, an optional **house-style** setting also makes the text mechanically correct under a style guide: punctuation, capitalization, numbers, hyphenation, quotations, and citations. The AI-ism catalog always runs; the style layer is additive.
+
+- **`none`** *(default)* — No style guide. Behave exactly as documented everywhere else in this file, including the em-dash target, the title-case-heading flag, and the curly-to-straight-quote guidance. Nothing below this section changes.
+- **`cmos`** — *The Chicago Manual of Style*, 18th ed. (humanities, trade nonfiction, general publishing). Also apply the **CMOS style rules** section below.
+- **`apa`** — *Publication Manual of the APA*, 7th ed. (psychology, education, nursing, social sciences). Also apply the **APA style rules** section below.
+
+**Choosing the style.** Honor an explicit request first ("Chicago"/"CMOS" → `cmos`; "APA"/"APA 7" → `apa`; "original"/"no style guide" → `none`). Otherwise auto-detect: footnotes/endnotes with superscript numbers or a *Bibliography* → `cmos`; parenthetical `(Author, Year)` in-text citations, a *References* list, or DOIs → `apa`; casual copy with no citations (blog, email, social) → `none`. When a manuscript clearly needs a guide but cues are ambiguous, state which you're assuming and offer to switch. Default to `none` — don't impose Chicago or APA mechanics on casual copy.
+
+### Conflict resolution (only when `--style` is `cmos` or `apa`)
+
+The style guide governs **mechanics** (marks, spelling, capitalization, citations); the AI-ism catalog governs **voice, rhythm, and vocabulary habit**. When both touch the same feature, the guide wins on the mechanic and the AI-ism layer still governs the *habit*. Three catalog rules are overridden while a style guide is active (CMOS and APA resolve them the same way):
+
+1. **Em/en dashes.** Both guides use the em dash deliberately (`—`, closed up, no surrounding spaces) and the en dash (`–`) for ranges. Do **not** drive em dashes toward zero and do **not** flag `—` on sight. Convert `--` to a true `—`. Still flag the AI *habit*: 3+ em-dash-joined clauses in one paragraph, or an em dash used as an all-purpose default where a comma, colon, period, or parentheses is the better choice.
+2. **Title-case headings.** Both guides use title case for headings (by their own rules — see each section). Do **not** flag title case itself; flag only inconsistency, or capitalization that breaks the active guide (CMOS lowercases all prepositions; APA capitalizes words of four+ letters).
+3. **Quotation marks.** Both guides require typographic (curly) marks `“ ” ‘ ’` and the apostrophe `’` in published prose. Ensure curly marks in finished output; straight/prime marks are correct only in plaintext, code, or as foot/inch/minute primes.
+
+Plus one addition both guides share: the **serial (Oxford) comma** is required.
+
+**Don't cross-contaminate the two guides.** CMOS and APA disagree on concrete points; applying one guide's rule under the other is an error:
+
+| Feature | CMOS (18th) | APA (7th) |
+|---|---|---|
+| Spell out numbers up to… | one hundred (general rule) | nine |
+| Title-case prepositions | lowercase, any length | capitalize if 4+ letters (*With*, *Between*) |
+| Reference-list title case | headline (title) case | sentence case |
+| Citation systems | notes-bibliography *or* author-date | author-date only |
+| Percentages in prose | spell out *percent* (*45 percent*) | `%` symbol (*45%*) |
 
 ---
 
@@ -678,7 +710,47 @@ Each profile is a set of concrete targets, not a vibe:
 
 ---
 
+## CMOS style rules (apply when `--style cmos`)
+
+*The Chicago Manual of Style*, 18th ed. (2024). Read alongside the AI-ism catalog above and the conflict-resolution rules. Chicago is preference-tolerant ("prefers X; Y acceptable if consistent") — enforce **consistency first**, Chicago's stated preference second. Rules new in the 18th edition are marked **[18th]**; honor `--edition 17` if the writer's house style predates it.
+
+**Punctuation.** Serial (Oxford) comma required. Em dash `—` closed up, no spaces, used deliberately for a break, an amplifying element, or a phrase containing commas; convert `--` to `—`. En dash `–` for number/date/page ranges (not with *from…to* or *between…and*) and in compound modifiers (*post–World War II*); **[18th]** *then–vice president*, *vice president–elect*, *Ali–Frazier match*. Colon: **[18th]** capitalize the first word after it only when what follows is a complete sentence. Semicolons/colons go **outside** closing quotation marks; periods/commas **inside** (American style). Prefer spaced ellipsis points (`. . .`).
+
+**Numbers.** General rule: spell out whole numbers **zero through one hundred** and round multiples (*two hundred*, *fifteen thousand*); numerals above. Scientific/technical alt (or the writer's house style): spell out zero through nine only — say which you use and stay consistent. Never begin a sentence with a numeral (**[18th]** a year may begin one; recasting is still better). Spell out *percent* with a numeral in general prose (*45 percent*); commas in numerals of four+ digits (*1,000*).
+
+**Capitalization.** Sentence case in running text; capitalize common nouns only when proper. Headings: pick headline style *or* sentence style and be consistent. Headline style — capitalize first/last words and all major words; lowercase articles, coordinating conjunctions, and **prepositions regardless of length** (*with, between*) unless first/last or stressed. Titles before names capitalized (*President Lincoln*); **[18th]** capitalize even with a modifier (*former President Carter*). **[18th]** *Indigenous* capitalized; *Black* usually capitalized; regional terms capitalized (*the Midwest, Midwestern*). Lowercase *internet, web, website* and seasons.
+
+**Hyphenation.** Follow *Merriam-Webster*. Hyphenate a compound modifier **before** a noun (*a well-known author*), open **after** a linking verb (*the author is well known*). No hyphen after an *-ly* adverb (*highly regarded*). Prefixes usually closed (*nonprofit, coordinate, reelect*); hyphenate before a proper noun/number or to avoid a doubled vowel. **[18th]** *ebook* closed.
+
+**Quotations & titles.** Block quotations at ~100 words / 6+ lines (indented, no quotation marks); shorter run in with quotation marks. Reproduce wording exactly; ellipsis for omissions, brackets for interpolations. Italicize titles of long/standalone works (books, journals, films); quotation marks for parts (articles, chapters, songs, episodes). **[18th]** familiar non-English words need not be italicized.
+
+**Pronouns.** **[18th]** Singular *they* is accepted for unspecified/unknown gender and for individuals who use it — do not "correct" it.
+
+**Documentation.** Two systems, never mixed: **notes-bibliography** (superscript note numbers + a *Bibliography*) or **author-date** (`(Lastname Year, page)` + a *Reference list*). **[18th]** place of publication no longer required; repeat the author's name instead of a 3-em dash in successive entries; up to two authors named in a note/text citation (then *et al.*), up to six in a bibliography entry (seven+ → first three + *et al.*). For entry types not shown, apply the general pattern and recommend confirming against the full CMOS example rather than inventing a format.
+
+## APA style rules (apply when `--style apa`)
+
+*Publication Manual of the APA*, 7th ed. Read alongside the AI-ism catalog and the conflict-resolution rules. APA is more prescriptive than Chicago on numbers, headings, and citations — do not carry Chicago's rules across (see the contrast table in the House-style section).
+
+**Punctuation.** Serial (Oxford) comma required. Em dash `—` closed up, sparing; en dash `–` for ranges. American placement (periods/commas inside, colons/semicolons outside). One space after end punctuation. Typographic (curly) quotation marks in finished prose.
+
+**Numbers.** Spell out **zero through nine**; **numerals for 10 and above** (opposite threshold from Chicago's general rule). Always numerals — even below 10 — for units of measurement, statistics, percentages, fractions/decimals, ages, time, dates, scores, money, and a specific place in a series (*Table 3*, *Step 1*, *Grade 8*). Spell out a number that begins a sentence, or reword. Use the `%` symbol with a numeral (*45%*), not the word.
+
+**Capitalization.** APA **title case** — capitalize major words *and* all words of **four letters or more**, including prepositions/conjunctions (*With, Between, About, From*); lowercase only minor words of **three letters or fewer** (*and, as, but, for, or, nor, a, an, the, to, in, of, on*…) unless first or after a colon. Use title case for headings and for titles of works in the running text. Use **sentence case** for titles of works **in the reference list** and for table/figure titles — so a book title is title case in text but sentence case in the References entry (a common slip). Five heading levels, all bold and title case (Levels 3 and 5 italic; Levels 4–5 run-in, ending with a period).
+
+**Hyphenation.** Compound modifier hyphenated before the noun, open after; no hyphen after an *-ly* adverb; most prefixes closed (*nonsignificant, pretest, coauthor*). Follow *Merriam-Webster*.
+
+**Quotations.** Short quotations (< 40 words) run in with double quotation marks; block quotations (40+ words) indented, no marks. Every quotation needs author, year, and page/paragraph (*p. 12* / *para. 4*).
+
+**Pronouns & bias-free language.** Singular *they* is endorsed; pair with a plural verb; don't rewrite a valid singular *they*. Bias-free language is required, not optional: describe people at the right level of specificity, use the terms groups use for themselves (person-first or identity-first per preference), and avoid framing one group as the norm.
+
+**Mechanics.** Define an abbreviation at first use, then use it. Latin abbreviations (*e.g., i.e., etc.*) only inside parentheses; spell out in running text. Ampersand (*&*) only inside parentheses and in references; *and* in running text.
+
+**Documentation (author-date only — no notes option).** In-text `(Author, 2021, p. 15)` or narrative *Author (2021)*; **&** inside parentheses, *and* in narrative. **Three or more authors → first author + *et al.* from the first citation.** References: alphabetical, hanging indent; up to **20 authors** listed (21+ → first 19, ellipsis, final author); **no place of publication**; DOIs/URLs as full `https://doi.org/…` links (no "DOI:" label, no "Retrieved from" unless a retrieval date is needed); reference titles in **sentence case**. Confirm every in-text citation has a matching reference and vice versa. For entry types not shown, apply the general pattern and recommend confirming against the specific APA reference example.
+
 ## Output format
+
+When a house style is active (`--style cmos` or `--style apa`), state it at the top of your response and label each flag `[CMOS]`/`[APA]` (a mechanical style fix) or `[AI-ism]` (a voice fix), so the writer can tell a style correction from a rewrite. In `edit` mode, apply mechanical style fixes (serial commas, en-dash ranges, number formatting, curly quotes) consistently across the whole document, not only where you happened to look. Under `--style none` the sections below apply unchanged.
 
 ### Rewrite mode (default)
 
