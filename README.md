@@ -23,6 +23,8 @@ A portable writing skill for [Claude Code](https://docs.anthropic.com/en/docs/cl
 
 An optional **voice profile** (casual / professional / technical / warm / blunt) sets how the prose should sound, independent of the audience context profile.
 
+An optional **house-style layer** (`--style none | google | cmos | apa`) conforms the text to a published style guide on top of the de-AI-ing pass. Its main use is **technical documentation**: `google` applies the *Google Developer Documentation Style Guide* (developer docs, READMEs, API references, changelogs), which also fixes a common failure of a plain de-AI pass, where the rewrite drifts too casual for a reference. `cmos` and `apa` cover publishing and academic writing (*The Chicago Manual of Style* 18th ed. and the *Publication Manual of the APA* 7th ed.). It defaults to `none`, which leaves the skill's behavior unchanged. Each guide reconciles the few places it disagrees with the AI-ism rules (Google and the de-AI pass mostly agree; CMOS and APA use the em dash and curly quotes deliberately). See the **House style** section in [`SKILL.md`](./SKILL.md).
+
 ## Quick demo
 
 **Input:**
