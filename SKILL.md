@@ -1,7 +1,7 @@
 ---
 name: avoid-ai-writing
-description: Audit and rewrite content to remove AI writing patterns ("AI-isms"). Use this skill when asked to "remove AI-isms," "clean up AI writing," "edit writing for AI patterns," "audit writing for AI tells," or "make this sound less like AI," and also when asked to copyedit to a house style — "edit in Chicago style," "make this CMOS-compliant," "put this in APA," "APA 7th edition." Supports a detect-only mode, an edit-in-place mode for files, an optional voice profile (casual / professional / technical / warm / blunt), an optional house-style layer (--style none | cmos | apa), and an iterate-to-convergence pass.
-version: 3.21.0
+description: Audit and rewrite content to remove AI writing patterns ("AI-isms"). Use this skill when asked to "remove AI-isms," "clean up AI writing," "edit writing for AI patterns," "audit writing for AI tells," or "make this sound less like AI," and also when asked to copyedit to a house style — "put this in Google developer style," "make these docs Google-style," "edit in Chicago style," "make this CMOS-compliant," "put this in APA." Supports a detect-only mode, an edit-in-place mode for files, an optional voice profile (casual / professional / technical / warm / blunt), an optional house-style layer for technical docs and publishing (--style none | google | cmos | apa), and an iterate-to-convergence pass.
+version: 3.22.0
 license: MIT
 compatibility: Any AI coding assistant that supports agentskills.io SKILL.md format (Claude Code, Cursor, VS Code Copilot, Hermes Agent, OpenHands, etc.) or OpenClaw. No external tools or APIs required.
 metadata:
@@ -40,7 +40,7 @@ This skill operates in one of three modes:
 
 Trigger detect mode when the user says "detect," "flag only," "audit only," "just flag," "scan," "what AI patterns are in this," or similar. Trigger edit mode when the user names a file and asks you to fix or clean it in place. Default to rewrite mode if not specified.
 
-**Invocation.** Natural language is enough ("rewrite this in a blunt voice for LinkedIn," "edit `post.md` in place," "scan this, don't rewrite"). Power users can also pass explicit options, which map to the sections below: `[--mode rewrite|detect|edit]`, `[--style none|cmos|apa]`, `[--voice casual|professional|technical|warm|blunt]`, `[--context linkedin|blog|technical-blog|investor-email|docs|casual]`, `[--file PATH]`, `[--iterate N]` (max 2).
+**Invocation.** Natural language is enough ("rewrite this in a blunt voice for LinkedIn," "edit `post.md` in place," "scan this, don't rewrite"). Power users can also pass explicit options, which map to the sections below: `[--mode rewrite|detect|edit]`, `[--style none|google|cmos|apa]`, `[--voice casual|professional|technical|warm|blunt]`, `[--context linkedin|blog|technical-blog|investor-email|docs|casual]`, `[--file PATH]`, `[--iterate N]` (max 2).
 
 **Iterate to convergence (optional).** Rewrite mode already runs one corrective second pass (see Output format) — that built-in pass *is* pass 2, so `--iterate` does not stack on top of it. When the writer asks to "iterate," "keep going until it's clean," or passes `--iterate N`, repeat the audit→rewrite cycle until no patterns remain or **N passes** are reached. Cap **N at 2**: a rewrite plus one corrective pass clears the flagged patterns, and a third pass costs a full regeneration while rarely finding more. Report how many passes it took ("converged in 2 passes").
 
@@ -65,35 +65,46 @@ In **edit** mode, your job is to:
 
 ---
 
-## House style (optional): `--style none | cmos | apa`
+## House style (optional): `--style none | google | cmos | apa`
 
-The rules in this skill remove AI-isms — a *voice* concern. Layered on top, an optional **house-style** setting also makes the text mechanically correct under a style guide: punctuation, capitalization, numbers, hyphenation, quotations, and citations. The AI-ism catalog always runs; the style layer is additive.
+This skill removes AI-isms — a *voice* concern. An optional **house-style** layer sits on top and makes the text conform to a published style guide: register, punctuation, capitalization, numbers, headings, and citations. The AI-ism catalog always runs; the style layer is additive.
+
+Its main use is **technical documentation** — the register AI output most often lands wrong. A de-AI pass on its own tends to overcorrect toward casual, "human"-sounding prose that reads wrong for an API reference, a README, or a changelog. A technical style guide gives the rewrite the right target instead of just "sound like a person."
 
 - **`none`** *(default)* — No style guide. Behave exactly as documented everywhere else in this file, including the em-dash target, the title-case-heading flag, and the curly-to-straight-quote guidance. Nothing below this section changes.
+- **`google`** — *Google Developer Documentation Style Guide* (developer docs, READMEs, API references, CLIs, changelogs, technical blogs). The on-market default for this tool's audience. Also apply the **Google technical style rules** section below.
 - **`cmos`** — *The Chicago Manual of Style*, 18th ed. (humanities, trade nonfiction, general publishing). Also apply the **CMOS style rules** section below.
-- **`apa`** — *Publication Manual of the APA*, 7th ed. (psychology, education, nursing, social sciences). Also apply the **APA style rules** section below.
+- **`apa`** — *Publication Manual of the APA*, 7th ed. (psychology, education, social sciences). Also apply the **APA style rules** section below.
 
-**Choosing the style.** Honor an explicit request first ("Chicago"/"CMOS" → `cmos`; "APA"/"APA 7" → `apa`; "original"/"no style guide" → `none`). Otherwise auto-detect: footnotes/endnotes with superscript numbers or a *Bibliography* → `cmos`; parenthetical `(Author, Year)` in-text citations, a *References* list, or DOIs → `apa`; casual copy with no citations (blog, email, social) → `none`. When a manuscript clearly needs a guide but cues are ambiguous, state which you're assuming and offer to switch. Default to `none` — don't impose Chicago or APA mechanics on casual copy.
+**Choosing the style.** Honor an explicit request first ("Google"/"Google style"/"dev docs" → `google`; "Chicago"/"CMOS" → `cmos`; "APA"/"APA 7" → `apa`; "no style guide" → `none`). Otherwise auto-detect from the artifact: code blocks, CLI/API/config references, a README or docs page, or a changelog → `google`; footnotes or a *Bibliography* → `cmos`; `(Author, Year)` citations, a *References* list, or DOIs → `apa`; casual copy with none of these → `none`. When cues are ambiguous, state which you're assuming and offer to switch. Default to `none` — don't impose a guide on casual copy.
 
-### Conflict resolution (only when `--style` is `cmos` or `apa`)
+### Conflict resolution (only when `--style` is set)
 
-The style guide governs **mechanics** (marks, spelling, capitalization, citations); the AI-ism catalog governs **voice, rhythm, and vocabulary habit**. When both touch the same feature, the guide wins on the mechanic and the AI-ism layer still governs the *habit*. Three catalog rules are overridden while a style guide is active (CMOS and APA resolve them the same way):
+The style guide governs **register and mechanics** (voice, marks, capitalization, headings, citations); the AI-ism catalog governs **voice, rhythm, and vocabulary habit**. When both touch a feature, the guide wins on the mechanic and the AI-ism layer still governs the *habit*. How they reconcile depends on the guide.
+
+**Under `google`** the guide and the de-AI catalog mostly *agree*: both cut fluff, hedging, hype, and wordiness; both want active voice and sparing em dashes; both want straight quotes. Two things the guide adds:
+
+1. **Register beats humanization.** The default guidance to make prose "sound more human" and keep deliberate irregularity (see "Over-polishing" and "Suspiciously clean grammar") is **overridden**. Technical docs want a clear, consistent documentation register — second person, present tense, active voice, one idea per sentence — not injected personality. This is the fix for a rewrite that came out too casual for technical content.
+2. **Structure is correct, not a tell.** Parallel bullet lists, numbered steps, imperative instructions, and parameter tables are the documentation norm; do not flag them as "excessive bullets" or "fragments." Headings are **sentence case**. Straight quotation marks and the serial comma are required.
+
+**Under `cmos` or `apa`** three catalog rules are overridden (both guides resolve them the same way):
 
 1. **Em/en dashes.** Both guides use the em dash deliberately (`—`, closed up, no surrounding spaces) and the en dash (`–`) for ranges. Do **not** drive em dashes toward zero and do **not** flag `—` on sight. Convert `--` to a true `—`. Still flag the AI *habit*: 3+ em-dash-joined clauses in one paragraph, or an em dash used as an all-purpose default where a comma, colon, period, or parentheses is the better choice.
 2. **Title-case headings.** Both guides use title case for headings (by their own rules — see each section). Do **not** flag title case itself; flag only inconsistency, or capitalization that breaks the active guide (CMOS lowercases all prepositions; APA capitalizes words of four+ letters).
 3. **Quotation marks.** Both guides require typographic (curly) marks `“ ” ‘ ’` and the apostrophe `’` in published prose. Ensure curly marks in finished output; straight/prime marks are correct only in plaintext, code, or as foot/inch/minute primes.
 
-Plus one addition both guides share: the **serial (Oxford) comma** is required.
+Plus, all three guides share one addition: the **serial (Oxford) comma** is required.
 
-**Don't cross-contaminate the two guides.** CMOS and APA disagree on concrete points; applying one guide's rule under the other is an error:
+**Don't cross-contaminate the guides.** They disagree on concrete points; applying one guide's rule under another is an error:
 
-| Feature | CMOS (18th) | APA (7th) |
-|---|---|---|
-| Spell out numbers up to… | one hundred (general rule) | nine |
-| Title-case prepositions | lowercase, any length | capitalize if 4+ letters (*With*, *Between*) |
-| Reference-list title case | headline (title) case | sentence case |
-| Citation systems | notes-bibliography *or* author-date | author-date only |
-| Percentages in prose | spell out *percent* (*45 percent*) | `%` symbol (*45%*) |
+| Feature | Google (dev docs) | CMOS (18th) | APA (7th) |
+|---|---|---|---|
+| Headings | sentence case | title (headline) case | title case |
+| Quotation marks | straight | curly (typographic) | curly |
+| Em dash | sparing | deliberate | sparing |
+| Voice | 2nd person, active, present | flexible | formal |
+| e.g. / i.e. in prose | avoid — "for example" / "that is" | allowed | parenthetical only |
+| Spell out numbers up to… | numerals in technical/UI contexts | one hundred | nine |
 
 ---
 
@@ -709,6 +720,22 @@ Each profile is a set of concrete targets, not a vibe:
 **How voice composes with context.** Voice sets the target; context sets how hard to enforce it. A voice *target* always applies, even where a context profile would skip that category — `technical` voice still prefers plain copulatives in a `casual` context that otherwise ignores copula avoidance. Where both axes govern the same rule and agree, they reinforce: `blunt` voice wants near-zero em-dashes and a `blog` context is already strict on them, so it stays a hard edit. Where they disagree, resolve toward the **stricter** of the two — a `warm` voice on `docs` still doesn't get decorative tables. Sensible default pairings: casual↔casual, professional↔linkedin/investor-email, technical↔docs/technical-blog.
 
 ---
+
+## Google technical style rules (apply when `--style google`)
+
+*Google Developer Documentation Style Guide.* Read alongside the AI-ism catalog and the conflict-resolution rules. Google and the de-AI pass pull the same direction on concision, hype, and hedging; the value this layer adds is a **documentation register** so the rewrite doesn't drift casual.
+
+**Voice and register.** Second person ("you"), active voice, present tense. Address the reader; don't use "we" for the product or org. Conversational but professional, not chatty and not stiff. One idea per sentence; prefer short sentences; lead with what the reader can do. Do **not** add deliberate disfluency, comma splices, or "personality" to sound human. Clarity and a consistent register are the goal. This overrides the default humanization bias.
+
+**Instructions.** Imperative mood for steps ("In the console, click **Create**."). Numbered lists for sequences, bullet lists for unordered items; state the goal before the steps. Give the location before the action ("On the **Settings** page, click **Save**," not "Click Save on the Settings page").
+
+**Word choices.** Cut "please" from instructions. Cut "simply," "easily," "just," "obviously," and "of course," which dismiss the reader's difficulty. Write "for example" and "that is" in prose; reserve *e.g.* / *i.e.* for parentheses, or avoid them. Use "and," not "&," in prose. Prefer specific verbs ("select," "enter," "run") over vague ones ("do," "perform"). Don't anthropomorphize the product ("the API wants…"). Use inclusive terms (allowlist / denylist, primary / replica).
+
+**Mechanics.** Serial (Oxford) comma required. **Straight** quotation marks and apostrophes, not curly (the opposite of CMOS/APA). Em dash sparingly, which aligns with the de-AI target, so no override is needed; en dash for ranges. **Sentence case** for headings and document titles. Define an abbreviation on first use, then use it.
+
+**Numbers.** Prefer numerals in technical and UI contexts, including zero through nine, when the number is a measurement, quantity, version, count, or UI value (*5 files*, *3 retries*, *10 GB*, *Step 2*). Spell out a number that begins a sentence, or reword. For cases not covered here, follow the guide's numbers section rather than inventing a rule.
+
+**Formatting.** Bold for UI element names; code font for code, filenames, commands, paths, and literal values. Descriptive link text, never "click here" or "here." Keep list items and headings parallel in structure.
 
 ## CMOS style rules (apply when `--style cmos`)
 

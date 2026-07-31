@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 
 ---
 
+## [3.22.0] — 2026-07-30
+
+### Added
+
+`--style google` adds a *Google Developer Documentation Style Guide* layer, the flagship of the optional house-style feature and the on-market fit for this tool's audience: developer docs, READMEs, API references, CLIs, changelogs, and technical blogs. It also addresses a common failure of a plain de-AI pass on technical content, where the rewrite overcorrects into casual, "human"-sounding prose that reads wrong for a reference. The Google layer gives the rewrite a documentation register instead: second person, present tense, active voice, imperative instructions, sentence-case headings, straight quotes, and the serial comma. It treats parallel lists, numbered steps, and parameter tables as correct rather than as AI tells.
+
+Under `--style google` the guide and the AI-ism catalog mostly reinforce each other (both cut fluff, hedging, hype, and em-dash overuse), so the one override is register: the default "make it sound more human" bias yields to a clear, consistent documentation voice.
+
+The `--style` selector is now `none | google | cmos | apa`, with a three-way contrast table that keeps the guides from cross-contaminating (Google uses sentence-case headings and straight quotes; CMOS and APA use title case and curly quotes). Still additive and backward-compatible: `none` is the default, no detection categories or word-table entries were added (CI counts unchanged at 60 / 112), and the skill stays a single `SKILL.md`.
+
+---
+
 ## [3.21.0] — 2026-07-30
 
 ### Added
