@@ -6,74 +6,102 @@ because a style guide is two different things to verify:
 | Half | Tool | Deterministic? |
 |---|---|---|
 | **Mechanics** (quotes, headings, em dash, numbers, dismissive words) | `style-lint.cjs` | Yes |
-| **Register / voice** ("reads like a reference manual", not casual) | `judge-eval.wf.js` + `aggregate.cjs` | No (LLM judge) |
+| **Register / voice / genre fit** | `judge-eval.wf.js` + `aggregate.cjs` | No (LLM judge) |
 
 The de-AI half is covered by the repo's own `AIDetector` (`detector/patterns.js`),
 which `style-lint.cjs` also reports.
 
-## 1. Mechanics linter (deterministic)
+## The core idea: genre × style
 
-Checks the mechanically-verifiable subset of each guide. Each style is checked
-against **its own** rules — Google wants straight quotes, sentence-case headings,
-and numerals for small numbers; CMOS wants the opposite (curly quotes, title case,
-spelled-out numbers, deliberate em dash). Running the wrong mode flags correct
-output, so pass the mode that matches the text.
+A style guide is only "good" relative to a **document genre**. Google style is right
+for API docs and wrong for an essay; Chicago is right for prose and wrong for a CLI
+reference. So the eval is a matrix: one AI-sounding source doc per genre, every style
+applied to every doc, and each rewrite judged by a rubric **matched to that doc's
+genre**. Each mode has a natural home genre where it should win:
 
-```sh
-node evals/style-lint.cjs path/to/output.md --style google
-node evals/style-lint.cjs path/to/output.md --style cmos --json
-```
+| Genre | Home style (should win) |
+|---|---|
+| technical (API/dev docs) | `google` |
+| prose / narrative (essay, nonfiction) | `cmos` |
+| academic (scholarly) | `apa` |
+| casual (blog / newsletter) | `none` — here formalizing is *wrong* |
 
-Advisory rules (`[advisory]`) are heuristic and expected to be noisy (e.g. the
-number-spelling checks); they are reported but don't affect the exit code. Exit is
-non-zero only on a non-advisory violation, so it works as a CI gate on a known-good
-fixture.
+The casual row is the sharp test: for informal content, the plain de-AI `none` pass
+should beat the formal styles, proving the guides aren't universally "better."
 
-## 2. Register eval (LLM judge)
+## 1. Register eval (LLM judge)
 
-`judge-eval.wf.js` is a Claude Code workflow. For each doc in its embedded corpus it
-generates a `none`, `google`, and `cmos` rewrite, then a **blind 3-judge panel**
-scores each version against a *guide-neutral technical-documentation* rubric (the
-judges are not told which variant they are scoring, or that any guide is the target).
-
-Run it from a Claude Code session:
+`judge-eval.wf.js` is a Claude Code workflow. For each doc in `CORPUS` it generates a
+rewrite in each style, then a **blind 3-judge panel** scores each rewrite against the
+genre rubric. Judges are told the genre but not which style produced the text.
 
 ```
 Workflow({ scriptPath: "evals/judge-eval.wf.js" })
 ```
 
-Then aggregate the returned JSON and lint the generated rewrites:
+Then aggregate the returned JSON (per-genre tables) and lint the rewrites:
 
 ```sh
 node evals/aggregate.cjs <workflow-output.json> evals/rewrites
-node evals/style-lint.cjs evals/rewrites/rate-limits.google.md --style google
-node evals/style-lint.cjs evals/rewrites/rate-limits.cmos.md   --style cmos
 ```
 
-`corpus/` holds the source docs (longer, AI-sounding, seeded with conversational
-hooks that tempt a plain de-AI pass to drift casual — the hard case for register).
+## 2. Mechanics linter (deterministic)
 
-## What the current corpus shows
+Checks the mechanically-verifiable subset of each guide. Each style is checked against
+**its own** rules — Google wants straight quotes, sentence-case headings, and numerals
+for small numbers; CMOS/APA want the opposite (curly quotes, title case, spelled-out
+numbers, deliberate/​sparing em dash). Pass the mode that matches the text.
 
-- **Google is the clear win for technical docs.** On inputs that tempt casual drift,
-  the plain de-AI pass (`none`) lands ~3.7/5 on register and technical-fit (judges:
-  "reads like a tutorial voice"); `--style google` holds ~4.75/5 and is mechanically
-  clean in `google` mode every time.
-- **CMOS on this corpus is an away game — by design.** The corpus is developer
-  reference docs; CMOS targets published prose. On a docs rubric CMOS scores about the
-  same as `none` (~3.6), because it isn't trying to produce a reference register. A
-  fair CMOS quality number needs a prose/publishing corpus and a CMOS-conformance
-  rubric, not this one.
-- **The curly-quote transform isn't self-enforcing.** In `cmos` mode the linter flags
-  `straight-apostrophe` on the CMOS rewrites: the model emits straight `'` in
-  contractions even when told to use typographic marks. If CMOS/APA output needs true
-  curly marks, that wants a deterministic post-process, not a prompt instruction.
+```sh
+node evals/style-lint.cjs evals/rewrites/technical.api-pagination.google.md --style google
+node evals/style-lint.cjs evals/rewrites/prose.essay-attention.cmos.md      --style cmos
+node evals/style-lint.cjs evals/rewrites/academic.abstract-sleep.apa.md     --style apa --json
+```
+
+Advisory rules (`[advisory]`) are heuristic and expected to be noisy (e.g. the
+number-spelling checks); they're reported but don't affect the exit code. Exit is
+non-zero only on a non-advisory violation, so it works as a CI gate on a known-good
+fixture.
+
+`corpus/` holds the source docs, named `<genre>.<id>.md`.
+
+## Findings
+
+Latest run (n=1 doc/genre, 3-judge panel). Judge `overall`, 1-5; **bold** = the
+home style for that genre. The result is a clean diagonal — every home style tops
+(or ties the top of) its own genre:
+
+| genre | none | google | cmos | apa |
+|---|---|---|---|---|
+| technical | 4.00 | **5.00** | 4.00 | 4.33 |
+| casual | **4.33** | 2.00 | 4.00 | 3.00 |
+| prose | 3.67 | 3.33 | **4.00** | 4.00 |
+| academic | 4.00 | 3.33 | 4.00 | **4.67** |
+
+What it shows:
+
+- **Each `--style` is the right tool for its genre.** google wins technical (5.00),
+  cmos wins prose (4.00, and it leads on `register_fit` 4.67 where apa ties on
+  overall), apa wins academic (4.67), and `none` wins casual (4.33).
+- **Formalizing casual content is actively wrong** — the sharpest signal. On the
+  newsletter doc, google and apa crash to `register_fit`/`genre_fit` of **2.00**
+  (`overall` 2.00 and 3.00): a reference/scholarly register is the wrong genre. This
+  is the guardrail that the style layer must NOT be applied blindly.
+- **google is too terse for prose/academic** (`overall` 3.33 in both) — right
+  instinct, wrong genre.
+- **Mechanics (linter, each in its own mode):** every home style is mechanically clean
+  in its mode. The recurring exception is CMOS/APA curly quotes — the `cmos` rewrites
+  still get flagged for `straight-apostrophe`/`straight-double-quote` because the model
+  emits straight marks (see the caveat below). Also note the `prose` cmos rewrite trips
+  the AIDetector (score 9) on its *deliberate* em dashes — CMOS wants them, the de-AI
+  detector flags them; a real tension between the guide and the catalog.
 
 ## Caveats
 
-- Rewrites are model output, so the judge scores and the AIDetector/linter results on
+- Rewrites are model output, so judge scores and the AIDetector/linter results on
   generated text vary run to run. The linter on a *fixed* file is deterministic.
-- n=4 docs. Directional, not a benchmark. Add docs to `corpus/` (and to the `CORPUS`
-  array in `judge-eval.wf.js`) to strengthen it.
-- The judge rubric is tuned for technical documentation. It is the wrong yardstick for
-  CMOS/APA prose quality.
+- n=1 doc per genre. Directional, not a benchmark. Add docs to `corpus/` and to the
+  `CORPUS` array in `judge-eval.wf.js` (with a `genre` field) to strengthen it.
+- The curly-quote transform is not self-enforcing: models emit straight apostrophes
+  even under `--style cmos`/`apa`, which the linter flags. True typographic marks want
+  a deterministic post-process, not a prompt instruction.

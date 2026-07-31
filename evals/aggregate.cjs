@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /*
- * aggregate.cjs — summarize a judge-eval.wf.js run.
+ * aggregate.cjs — summarize a judge-eval.wf.js (genre x style matrix) run.
  *
  * Usage: node evals/aggregate.cjs <workflow-output.json> [outDir]
  *
- * Reads the workflow result (either the raw {results:[...]} return value or the
- * task wrapper {..., result:{results:[...]}}), prints the mean judge score per
- * dimension per style variant, and writes each generated rewrite to
- * outDir/<docId>.<variant>.md so the deterministic linter can be run on them.
+ * Reads the workflow result (raw {results:[...]} or the task wrapper
+ * {..., result:{results:[...]}}). For each genre it prints the mean judge score
+ * per dimension per style, and writes each rewrite to
+ * outDir/<genre>.<docId>.<style>.md so the deterministic linter can run on them.
  */
 const fs = require('fs');
 const path = require('path');
@@ -20,23 +20,33 @@ const parsed = JSON.parse(fs.readFileSync(inPath, 'utf8'));
 const data = parsed.result || parsed;
 const results = data.results || [];
 
-const DIMS = ['register', 'imperative_actions', 'concision', 'no_ai_personality', 'technical_fit', 'overall'];
-const VARIANTS = Object.keys(results[0] || {}).filter((k) => k !== 'id' && k !== 'doc');
+const DIMS = ['ai_tells_removed', 'register_fit', 'mechanics_fit', 'readability', 'genre_fit', 'overall'];
+const META = new Set(['id', 'genre', 'doc']);
+const styleKeys = (r) => Object.keys(r).filter((k) => !META.has(k));
 
 fs.mkdirSync(outDir, { recursive: true });
-const acc = {}; VARIANTS.forEach((v) => { acc[v] = {}; DIMS.forEach((d) => (acc[v][d] = [])); });
+const avg = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : NaN);
 
-results.forEach((r) => VARIANTS.forEach((v) => {
-  if (!r[v]) return;
-  fs.writeFileSync(path.join(outDir, `${r.id}.${v}.md`), r[v].text || '');
-  (r[v].judges || []).forEach((j) => DIMS.forEach((d) => acc[v][d].push(j[d])));
+results.forEach((r) => styleKeys(r).forEach((s) => {
+  fs.writeFileSync(path.join(outDir, `${r.genre}.${r.id}.${s}.md`), r[s].text || '');
 }));
 
-const avg = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : NaN);
-const n = results.length;
-console.log(`\n=== LLM-judge means (${n} docs x 3 judges) ===\n`);
-console.log('dimension'.padEnd(20) + VARIANTS.map((v) => v.padStart(9)).join(''));
-DIMS.forEach((d) => {
-  console.log(d.padEnd(20) + VARIANTS.map((v) => avg(acc[v][d]).toFixed(2).padStart(9)).join(''));
-});
-console.log(`\nrewrites written to ${outDir}/ (run style-lint.cjs on them)`);
+// group by genre
+const byGenre = {};
+results.forEach((r) => { (byGenre[r.genre] = byGenre[r.genre] || []).push(r); });
+
+for (const [genre, rows] of Object.entries(byGenre)) {
+  const styles = styleKeys(rows[0]);
+  const acc = {}; styles.forEach((s) => { acc[s] = {}; DIMS.forEach((d) => (acc[s][d] = [])); });
+  rows.forEach((r) => styles.forEach((s) => (r[s].judges || []).forEach((j) => DIMS.forEach((d) => acc[s][d].push(j[d])))));
+
+  console.log(`\n=== GENRE: ${genre}  (home style should win) ===\n`);
+  console.log('dimension'.padEnd(18) + styles.map((s) => s.padStart(9)).join(''));
+  DIMS.forEach((d) => {
+    console.log(d.padEnd(18) + styles.map((s) => avg(acc[s][d]).toFixed(2).padStart(9)).join(''));
+  });
+  // winner by overall
+  const best = styles.map((s) => [s, avg(acc[s].overall)]).sort((a, b) => b[1] - a[1])[0];
+  console.log(`winner (overall): ${best[0]} @ ${best[1].toFixed(2)}`);
+}
+console.log(`\nrewrites written to ${outDir}/`);
