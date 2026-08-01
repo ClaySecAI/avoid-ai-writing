@@ -96,6 +96,32 @@ What it shows:
   the AIDetector (score 9) on its *deliberate* em dashes — CMOS wants them, the de-AI
   detector flags them; a real tension between the guide and the catalog.
 
+## Do the detailed rules earn their keep? (`terse-vs-detailed.wf.js`, `multi-model/`)
+
+The `--style` sections spell out each guide's mechanics. Are they needed, or does the
+model already know Chicago/APA/Google from the name alone? Three conditions were
+compared: **rules-only** (mechanics, no guide named), **name-only** (just "apply
+Chicago 18th"), and **name + rules** (what the skill ships).
+
+- On a **frontier model (Opus)**, name-only matched name+rules — the model knows the
+  guides, and the detailed rules bought little. This is the trap: testing only on a
+  strong model makes the rules look redundant.
+- Across **smaller / local models** (`multi-model/`: ornith-35b, mistral-24b,
+  gemma4-e4b via Ollama, plus Haiku 4.5), name-only was the **weakest** condition
+  every time, and the gap widened as the model shrank. mistral-24b leaked mechanics
+  violations under name-only (3) that rules/both fixed (0); gemma4-e4b's overall
+  dropped to 2.89 (vs 3.67 with rules) and it failed one rewrite outright. `both` was
+  best or tied-best on every working model.
+- **Conclusion: keep the detailed rules.** The "model already knows it" result is a
+  frontier-model artifact; the skill targets *any* assistant, including local models,
+  where the rules measurably improve quality and mechanical consistency.
+
+Run: `MODELS=... node evals/multi-model/gen-local.mjs` (writes rewrites + a
+`manifest.json`), then pass the manifest as `args` to `multi-model/judge-mm.wf.js`
+(it adds Haiku rewrites and judges all blind). ornith-35b is a creative-writing
+fine-tune that ignored "return only the rewrite" — a bad fit for copyediting, and
+excluded from the conclusion.
+
 ## Caveats
 
 - Rewrites are model output, so judge scores and the AIDetector/linter results on
