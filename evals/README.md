@@ -117,14 +117,13 @@ Run: `MODELS=... node evals/multi-model/gen-local.mjs` (writes rewrites + `manif
 
 ## Caveats
 
-- **The deterministic linter over-counts and isn't cross-comparable.** It flags
-  word-sense uses ("returns *just* the first page") as hard violations; it counts per
-  line, so longer output inflates counts (ornith's "37" partly measures length); and
-  cmos/apa mode flags every straight mark while google mode has no equivalent failure
-  surface, so google looks clean by construction. Its `google` em-dash threshold
-  (words/400) is also looser than the skill's own 1/1,000. Treat its counts as a rough
-  signal, decompose by rule before trusting a number, and don't compare counts across
-  styles or across outputs of different length.
+- **Linter counts still aren't comparable across styles** (inherent): cmos/apa flag
+  every straight mark while google has no equivalent failure surface, so google looks
+  clean by construction — don't compare hard counts across styles. Word-sense uses
+  ("returns *just* the first page"), number-spelling, and em-dash rate are now
+  **advisory** (excluded from the hard count), and the em-dash threshold is aligned to
+  the skill's 1/1,000. Use `hardPerKw` (hard violations per 1,000 words), not the raw
+  count, to compare outputs of different length.
 - Rewrites are model output, so judge scores and linter results on generated text vary
   run to run. The linter on a *fixed* file is deterministic.
 - n=1 doc per cell; no repeated sampling; no confidence intervals. Directional only.
