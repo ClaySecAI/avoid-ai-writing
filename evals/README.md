@@ -109,11 +109,21 @@ Chicago 18th"), and **name + rules** (what the skill ships).
   So name-only is clearly worst only for gemma and haiku; "the gap widens as the model shrinks" rests on ~2 usable points with no established size ordering (haiku vs mistral).
 - **The mechanics case is neutralized by our own normalizer.** The one crisp signal (mistral name-only leaked 3 mechanics violations vs 0 for rules/both) is exactly what `scripts/normalize-quotes.cjs` fixes deterministically after every `--style` pass. Post-normalizer the conditions converge on mechanics; any remaining case would have to come from register, where the deltas are noise-scale.
 
-**Honest conclusion: unresolved.** The detailed rules are kept because they don't hurt and *may* help the smallest models — but this eval does not establish "keep the rules." A fair test needs a rubric that does NOT name the guides, n>1 docs, and repeated sampling.
+That first comparison was **circular** — its rubric named each guide's mechanics as the definition of correctness. `multi-model/gen-neutral.mjs` + `judge-neutral.wf.js` re-run the three conditions with a rubric that **names no guide and prescribes no mechanics**, n=2 docs/genre, on gemma4-e4b / mistral-24b / Haiku 4.5 (Sonnet judge). Judge `overall` (18 samples/cell):
 
-Run-specific confounds: a single Sonnet judge (the genre matrix used a different judge, so the two tables aren't comparable); `gen-local.mjs` caps `num_predict: 700`, which truncates verbose models — ornith-35b (a creative fine-tune) was truncated, scored ~1.0, and is excluded, but the truncation is a confound, not simply "it ignored instructions."
+| model | rules | name | both |
+|---|---|---|---|
+| gemma4-e4b | **4.06** | 3.17 | 3.22 |
+| mistral-24b | **4.17** | 4.06 | 3.72 |
+| haiku-4.5 | 4.39 | 4.28 | **4.44** |
 
-Run: `MODELS=... node evals/multi-model/gen-local.mjs` (writes rewrites + `manifest.json`), then pass the manifest as `args` to `multi-model/judge-mm.wf.js` (it adds Haiku rewrites and judges all blind).
+- **`rules-only` is best or tied-best on quality for every model** — the concrete directives help, most on the smallest model (gemma).
+- **Naming the guide adds little, and hurts the small model:** gemma rules 4.06 vs `both` 3.22 (−0.84). The value is the directives, not the guide name.
+- Mechanics (fixed linter, hard/1k words) favor `both` (gemma 0.0), but that's moot — the normalizer handles marks regardless.
+
+**Conclusion (de-biased): keep the detailed rules** — they help quality, most on the small/local models the skill also targets. But the **guide name earns far less than assumed** and can hurt small models, so **rules-forward phrasing** (lead with the concrete directives, mention the guide name second) is worth trying in the SKILL. Caveats: n=2; gemma produced a couple of short outputs under name/both that drag those cells; Sonnet judge; the biased table above is kept only to show why the neutral re-run was needed.
+
+Run the biased comparison: `MODELS=... node evals/multi-model/gen-local.mjs` → pass `manifest.json` as `args` to `judge-mm.wf.js`. Run the neutral one: `MODELS=... node evals/multi-model/gen-neutral.mjs` (writes to `mmn/`), inline the rewrites into `judge-neutral.wf.js`, then run it.
 
 ## Caveats
 
