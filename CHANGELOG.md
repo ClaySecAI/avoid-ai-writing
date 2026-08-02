@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 ---
 
+## [Unreleased]
+
+### Added
+
+`scripts/normalize-quotes.js` — a deterministic, guide-agnostic pass that makes a document's quotation marks and apostrophes consistently straight or curly (`--quotes straight|curly`). A rewrite tends to emit straight marks regardless of what the surrounding document uses; run this afterward to make them consistent. It skips YAML frontmatter and every code context (fenced, inline, and indented), educates quotes next to inline `code` in the right direction, and never rewrites hyphens. Covered by `scripts/normalize-quotes.test.js` (run under `npm test`).
+
+---
+
 ## [3.20.0] — 2026-07-29
 
 ### Added
