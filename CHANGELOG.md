@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 ---
 
+## [3.21.0] — 2026-08-02
+
+### Added
+
+An optional `--style none | google | cmos | apa` house-style layer, so the skill can copyedit to a published style guide while still removing AI-isms. Additive and backward-compatible: `none` is the default and changes nothing; no detection categories or word-table entries were added (CI counts unchanged at 60 / 112); the skill stays a single `SKILL.md`.
+
+- **`--style google`** — *Google Developer Documentation Style Guide* (developer docs, READMEs, API references, CLIs, changelogs). Adds a documentation register (second person, present tense, active voice, imperative steps, sentence-case headings, straight quotes) and treats parallel lists, numbered steps, and parameter tables as correct, not as AI tells.
+- **`--style cmos`** — *The Chicago Manual of Style*, 18th ed.: deliberate em dash / en-dash ranges, 18th-edition colon capitalization and hyphenation, the general number rule (zero–one hundred), titles, and both documentation systems.
+- **`--style apa`** — *Publication Manual of the APA*, 7th ed.: spell-out-below-10 with its numeral exceptions, APA title case, five heading levels, author-date citations (et al. from the first citation; up to 20 names), and bias-free language.
+- **Conflict resolution + contrast table.** Where a guide and the AI-ism catalog touch the same feature, the guide wins the mechanic and the catalog keeps the habit (em dashes allowed under CMOS/APA but the stacking *habit* still flagged; title case and curly marks not flagged). A contrast table plus a "common to all three" note keep the guides from cross-contaminating.
+- **Deterministic marks pass.** Generation does not emit typographic marks reliably, so a quotation-mark/apostrophe sweep is the final step of any `--style` pass, provided as `scripts/normalize-quotes.js` (skips frontmatter and code; covered by tests under `npm test`).
+- **Style selection.** A bare de-AI request stays `none`; a guide activates only on an explicit request or an explicit house-style ask (then inferred from the artifact).
+
+---
+
 ## [3.20.0] — 2026-07-29
 
 ### Added
