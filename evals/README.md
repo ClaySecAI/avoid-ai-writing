@@ -121,9 +121,24 @@ That first comparison was **circular** — its rubric named each guide's mechani
 - **Naming the guide adds little, and hurts the small model:** gemma rules 4.06 vs `both` 3.22 (−0.84). The value is the directives, not the guide name.
 - Mechanics (fixed linter, hard/1k words) favor `both` (gemma 0.0), but that's moot — the normalizer handles marks regardless.
 
-**Conclusion (de-biased): keep the detailed rules** — they help quality, most on the small/local models the skill also targets. But the **guide name earns far less than assumed** and can hurt small models, so **rules-forward phrasing** (lead with the concrete directives, mention the guide name second) is worth trying in the SKILL. Caveats: n=2; gemma produced a couple of short outputs under name/both that drag those cells; Sonnet judge; the biased table above is kept only to show why the neutral re-run was needed.
+**Conclusion (de-biased): keep the detailed rules** — they help quality, most on the small/local models the skill also targets. The **guide name**, though, earns its keep only at the top end (see the tier test next). Caveats: n=2; gemma produced a couple of short outputs under name/both that drag those cells; Sonnet judge; the biased table above is kept only to show why the neutral re-run was needed.
 
-Run the biased comparison: `MODELS=... node evals/multi-model/gen-local.mjs` → pass `manifest.json` as `args` to `judge-mm.wf.js`. Run the neutral one: `MODELS=... node evals/multi-model/gen-neutral.mjs` (writes to `mmn/`), inline the rewrites into `judge-neutral.wf.js`, then run it.
+### Does the guide name help stronger models? (`multi-model/judge-tiers.wf.js`)
+
+A cloud-only follow-up: Opus / Sonnet / Haiku as rewriters × rules/name/both, a harder corpus (2 docs/genre) and a strict full-scale neutral rubric to fight ceiling saturation, single fixed Opus judge. `name − rules` on `overall`, placed against gemma from the neutral run:
+
+| model (weak → strong) | name − rules |
+|---|---|
+| gemma-e4b | −0.89 |
+| haiku-4.5 | −0.33 |
+| sonnet-5 | 0.00 |
+| opus-4.8 | +0.33 |
+
+A clean **monotonic gradient**: the guide name's value rises with model capability — it hurts small models and helps the strongest. By genre, the Opus advantage is **entirely technical/Google** (+1.00; prose and academic are flat), so the name pays off only when a strong model already knows that guide well.
+
+**So there is no universal phrasing.** The name's harm to small models (−0.89) exceeds its help to the strongest (+0.33). Decision: **keep `both` (name + rules) as the shipped default** — the skill's main audience is capable assistants, and `both` banks the Opus/Google win — and **add a SKILL note that small/local models do better acting on the rules with the guide name secondary.** (Both changes are on `feat/style-guides`.) A blanket rules-forward rewrite is *not* warranted; it would forfeit the top-tier gain. Caveats: 1 judge/cell (6 samples); any single ±0.33 is ~2 judge-points — the 4-tier monotonic line is the robust part; the Opus judge shifts the Opus row's level (self-preference), not the within-row name-vs-rules contrast.
+
+Run the biased comparison: `MODELS=... node evals/multi-model/gen-local.mjs` → pass `manifest.json` as `args` to `judge-mm.wf.js`. Neutral (small/local): `MODELS=... node evals/multi-model/gen-neutral.mjs`, inline into `judge-neutral.wf.js`, run. Tier test (cloud): run `multi-model/judge-tiers.wf.js` directly (no local gen).
 
 ## Caveats
 
