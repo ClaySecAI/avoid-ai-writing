@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 ---
 
+## [Unreleased]
+
+### Added
+
+Optional `--style none | google` house-style layer. `none` (default) changes nothing. `--style google` applies the *Google Developer Documentation Style Guide* register and mechanics to technical docs (developer docs, READMEs, API references, CLIs, changelogs), with genre-awareness (a bare de-AI request stays `none`; the guide is not imposed on casual copy) and conflict resolution so documentation structure and register aren't flagged as AI tells. Mechanical conformance is checkable deterministically via `scripts/check-google-style.js` (sentence-case headings, straight quotes, `e.g.`/`i.e.` placement) rather than an LLM judgment, and is covered by `scripts/check-google-style.test.js` under `npm test`. Skill-only: no new detector types, so the CI counts are unchanged (60 / 112).
+
+---
+
 ## [3.20.0] — 2026-07-29
 
 ### Added
