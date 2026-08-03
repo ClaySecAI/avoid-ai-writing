@@ -65,34 +65,6 @@ In **edit** mode, your job is to:
 
 ---
 
-## House style (optional): `--style none | google`
-
-This skill removes AI-isms (a *voice* concern). The optional **house-style** layer additionally makes the text conform to a published style guide's register and mechanics. The AI-ism catalog always runs; the layer is additive.
-
-- **`none`** *(default)* — no style guide; nothing in this section applies.
-- **`google`** — *Google Developer Documentation Style Guide*, for developer docs, READMEs, API references, CLIs, and changelogs.
-
-**When to apply.** A bare request to remove AI-isms stays `none`, even on technical docs. Use `google` only when the writer asks for it or asks to copyedit technical docs to house style. Don't impose it on casual or narrative copy — a documentation register reads wrong there.
-
-**Conflict resolution.** Where the guide and the AI-ism catalog touch the same feature, the guide wins the mechanic:
-
-1. **Register beats humanization.** Override the "sound more human" / deliberate-irregularity guidance (see "Over-polishing"). Technical docs want a consistent documentation register, not injected personality.
-2. **Structure is correct, not a tell.** Don't flag parallel bullet lists, numbered steps, imperative instructions, or parameter tables as "excessive bullets" or "fragments."
-
-### Google technical style rules (apply when `--style google`)
-
-**Voice and register.** Second person ("you"), active voice, present tense; imperative for steps ("In the console, click **Create**."). One idea per sentence; lead with what the reader can do.
-
-**Word choices.** Cut "please" from instructions and the dismissive "simply," "easily," "just," "obviously." Reserve *e.g.* / *i.e.* for parentheses; write "for example" / "that is" in prose. Prefer specific verbs ("select," "run") over vague ones. Use inclusive terms (allowlist / denylist).
-
-**Mechanics.** Sentence case for headings and titles. Straight quotation marks and apostrophes. Serial (Oxford) comma. Em dash sparingly; en dash for ranges.
-
-**Numbers.** Spell out zero through nine; numerals for 10 and above and for measurements, versions, and UI/step values (*10 GB*, *Step 2*).
-
-**Formatting.** Bold for UI element names; code font for code, filenames, commands, and paths. Descriptive link text, never "click here."
-
-**Conformance check.** `scripts/check-google-style.js <file>` verifies the mechanical rules deterministically (sentence-case headings, straight quotes, `e.g.`/`i.e.` in parentheses) rather than trusting a judgment call. `none` output is never checked.
-
 ## What to remove or fix
 
 ### Formatting
@@ -705,6 +677,34 @@ Each profile is a set of concrete targets, not a vibe:
 **How voice composes with context.** Voice sets the target; context sets how hard to enforce it. A voice *target* always applies, even where a context profile would skip that category — `technical` voice still prefers plain copulatives in a `casual` context that otherwise ignores copula avoidance. Where both axes govern the same rule and agree, they reinforce: `blunt` voice wants near-zero em-dashes and a `blog` context is already strict on them, so it stays a hard edit. Where they disagree, resolve toward the **stricter** of the two — a `warm` voice on `docs` still doesn't get decorative tables. Sensible default pairings: casual↔casual, professional↔linkedin/investor-email, technical↔docs/technical-blog.
 
 ---
+
+## House style (optional): `--style none | google`
+
+This skill removes AI-isms (a *voice* concern). The optional **house-style** layer additionally makes the text conform to a published style guide's register and mechanics. The AI-ism catalog always runs; the layer is additive.
+
+- **`none`** *(default)* — no style guide; nothing in this section applies.
+- **`google`** — *Google Developer Documentation Style Guide*, for developer docs, READMEs, API references, CLIs, and changelogs.
+
+**When to apply.** A bare request to remove AI-isms stays `none`, even on technical docs. Use `google` only when the writer asks for it or asks to copyedit technical docs to house style. Don't impose it on casual or narrative copy — a documentation register reads wrong there.
+
+**Conflict resolution.** Where the guide and the AI-ism catalog touch the same feature, the guide wins the mechanic:
+
+1. **Register beats humanization.** Override the "sound more human" / deliberate-irregularity guidance (see "Over-polishing"). Technical docs want a consistent documentation register, not injected personality.
+2. **Structure is correct, not a tell.** Don't flag parallel bullet lists, numbered steps, imperative instructions, or parameter tables as "excessive bullets" or "fragments."
+
+### Google technical style rules (apply when `--style google`)
+
+**Voice and register.** Second person ("you"), active voice, present tense; imperative for steps ("In the console, click **Create**."). One idea per sentence; lead with what the reader can do.
+
+**Word choices.** Cut "please" from instructions and the dismissive "simply," "easily," "just," "obviously." Reserve *e.g.* / *i.e.* for parentheses; write "for example" / "that is" in prose. Prefer specific verbs ("select," "run") over vague ones. Use inclusive terms (allowlist / denylist).
+
+**Mechanics.** Sentence case for headings and titles. Straight quotation marks and apostrophes. Serial (Oxford) comma. Em dash sparingly; en dash for ranges.
+
+**Numbers.** Spell out zero through nine; numerals for 10 and above and for measurements, versions, and UI/step values (*10 GB*, *Step 2*).
+
+**Formatting.** Bold for UI element names; code font for code, filenames, commands, and paths. Descriptive link text, never "click here."
+
+**Conformance check.** `scripts/check-google-style.js <file>` verifies the mechanical rules deterministically (sentence-case headings, straight quotes, `e.g.`/`i.e.` in parentheses) rather than trusting a judgment call. `none` output is never checked.
 
 ## Output format
 
