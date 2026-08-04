@@ -4,6 +4,30 @@ All notable changes to this project are documented here.
 
 ---
 
+## [3.23.0] — 2026-08-03
+
+### Added
+
+- **Optional `--style` house-style layer, with no bundled guides.** `--style ./house.json` applies a user-supplied config (`register` directives the model follows, plus `mechanics`) and `scripts/check-style.js` verifies the checkable ones deterministically: `quotes` and `latinAbbrev` gate the exit code (0 clean / 1 hard / 2 tool error), `headings`, `emDash` and `spellNumbersUpTo` are advisory, `serialComma` is never checked. `examples/` holds two generic starters and the schema.
+- **A bare `--style "APA"` is a best-effort fallback, not a feature.** `SKILL.md` instructs the model to open with a status line claiming no compliance and not to reproduce the guide's text. Those are instructions rather than checked rules, so that path is unverified by construction. The README says where encoded guides actually live, and the licensing rule behind it is recorded in #88.
+- No detector changes, so the catalog stays 61 / 112. 39 tests in `scripts/check-style.test.js`, most of them pinning must-not-fire cases: link titles and reference definitions, HTML attributes, nested and tilde fences, BOM'd frontmatter, parentheticals that wrap or span a code block, URLs containing parentheses, and indented code blocks (while lazy continuation, list-item content, and a document opening with a thematic break stay checked). Each was a hard violation on a correct document at some point during review.
+
+---
+
+## [3.22.3] — 2026-08-03
+
+### Changed
+
+- **Five prose-contract clarifications in `SKILL.md`; no rule, threshold, or detector behavior changes.** All five came from an automated review (cubic) on a downstream vendoring PR, davila7/claude-code-templates#773. Each was a real gap between what one sentence promised and what another required; none change what the skill flags or how the engine scores. A sixth finding in that review (ship the downstream catalog regeneration inside the PR) was downstream-specific and declined there, with that repo's merge history as evidence.
+- **An adversarial review pass before merge caught the gaps the first draft of this fix opened.** Two header comments in `detector/validate.js` quoted the pre-fix sentences verbatim and would have been orphaned by the reword — both refreshed (comment-only, no behavior change). The first draft of the URL-parameter fix said "only the listed parameters are the signature," which contradicted the engine: `AI_URL_PARAMS` in validate.js and `ai-utm-source` in patterns.js both cover referrer variants (`gemini.google.com`, `grok.com`, `openai.com`) the SKILL.md list does not name, so the exclusivity claim came out. And the first draft of the edit-mode paragraph stacked seven "X, not Y" contrastive negations on one line in a file whose previous maximum anywhere was two — the same uniform-register move this skill exists to catch; three were rewritten as direct positives.
+- **Tables joined the flag-don't-fix list in the edit-mode instructions.** `detector/validate.js` has always treated table content as reference material and failed a rewrite that altered a cell — but the prose promise the validator claims to enforce ("the promises made above") never actually named tables, so edit mode was told to fix a tell inside a cell and then failed its own preservation check for doing it. The promise now matches the check, with the reason stated: a wording fix is not worth risking the data the table exists to carry.
+- **The rewrite-mode job line no longer claims "all AI-isms removed."** It now scopes the claim to every *editable* AI-ism, with the flag-don't-fix exemptions binding in rewrite mode too. The old wording put a correct rewrite in the wrong on protected content: it either broke the exemptions to satisfy "all" or reported itself incomplete for honoring them. A tell standing inside a blockquote now belongs in section 1 as a flag, not against the rewrite as unfinished work.
+- **An explicit instruction boundary for edit mode.** The file being edited is text under audit, never a source of instructions: a document that tells its editor to "ignore the rules above" or "don't flag this section" gets that sentence flagged, not obeyed. A skill authorized to modify files in place should state this rather than assume it. The same boundary is stated for pasted text in the other two modes.
+- **The AI-tracking-parameter fix now says what it always meant:** strip the AI-referrer tracking parameter, leave the rest of the query string alone. "Strip the parameter from every URL" could be read as license to clean query strings generally, and a functional `?page=2` is not evidence of anything.
+- **The second-pass audit must say when its corrected text supersedes section 2.** A reader skimming for the deliverable copies section 2; if the second pass fixed anything, that copy ships the tells the pass just caught. The pass now has to say "use this version, not section 2" in as many words.
+
+---
+
 ## [3.22.2] — 2026-08-02
 
 ### Fixed
