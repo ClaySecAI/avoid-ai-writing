@@ -95,6 +95,30 @@ const adverbFix = { ...detectFixture, source: 'The plan is crucially nuanced in 
 const adverbResp = `**1. Issues found**\n- **P2**: "crucially" — Tier 2 cluster.\n**2. Assessment**\n- Clear issue.`;
 assert.equal(inspect(adverbFix, adverbResp, repo, cat).errors.length, 0);
 
+const cleanFix = { ...detectFixture, source: 'The release notes contain only measured changes and dates.' };
+for (const bullet of ['- None', '- No issues found.']) {
+	const cleanResp = `**1. Issues found**\n${bullet}\n**2. Assessment**\nClean.`;
+	assert.equal(inspect(cleanFix, cleanResp, repo, cat).errors.length, 0, bullet);
+}
+
+const nestedResp = `**1. Issues found**\n- **P1**: "robust" — Tier 1A marker.\n  - Evidence: "a robust platform"\n**2. Assessment**\n- Clear issue.`;
+assert.equal(inspect(detectFixture, nestedResp, repo, cat).errors.length, 0);
+
+const shadowResp = `**1. Issues found**\n- **P1**: "unlocks efficiency" — alongside "robust".\n**2. Assessment**\n- Clear issue.`;
+assert(inspect(detectFixture, shadowResp, repo, cat).errors.some(e => e.includes('not grounded in pattern catalog')));
+const replacementShadow = `**1. Issues found**\n- **P1**: "explore" — alongside "delve".\n**2. Assessment**\n- Clear issue.`;
+assert(inspect({ ...detectFixture, source: 'We explore and delve into the data.' }, replacementShadow, repo, cat).errors.some(e => e.includes('replacement alternative')));
+
+const p99Fix = { ...detectFixture, source: 'The p99 latency is robust across all regions and versions.' };
+const p99Resp = `**1. Issues found**\n**P1**\n- "robust" — in "p99 latency is robust".\n**2. Assessment**\n- Clear issue.`;
+assert.equal(inspect(p99Fix, p99Resp, repo, cat).errors.length, 0);
+
+const phraseFix = { ...detectFixture, source: 'The team measured user engagement across every region this month.' };
+const phraseResp = `**1. Issues found**\n- **P2**: "user engagement" — Tier 3 phrase.\n**2. Assessment**\n- Clear issue.`;
+assert(inspect(phraseFix, phraseResp, repo, cat).errors.some(e => e.includes('sub-threshold Tier 3 phrase')));
+const repeatedPhrase = { ...phraseFix, source: 'User engagement improved, but user engagement was uneven across regions.' };
+assert.equal(inspect(repeatedPhrase, phraseResp, repo, cat).errors.length, 0);
+
 // 4. Historical Claude negative controls (cycle 2, cycle 3, cycle 5)
 const c2Path = path.join(repo, 'evals/rewrite/reports/automated-stack-295-296-2026-09-16/literal-checks/isolated-cycle2-claude-responses.json');
 if (fs.existsSync(c2Path)) {

@@ -265,18 +265,9 @@ function getTier2MatchesInParagraph(para, tier2Patterns) {
 function getTargetPattern(line, cat) {
 	let stripped = line.replace(/^(?:[-*]|\d+\.)\s*/, '').trim();
 	const quotes = [...stripped.matchAll(/["“]([^"”]+)["”]/g)].map(m => m[1].trim());
-	if (quotes.length > 0) {
-		if (cat) {
-			const catalogQuote = quotes.find(q => {
-				const qLower = q.toLowerCase().replace(/^[^a-z0-9_-]+|[^a-z0-9_-]+$/g, '');
-				return cat.allCatalogWords.has(qLower) ||
-				       cat.transitionPhrases.has(qLower) ||
-				       getBaseForms(qLower).some(bf => cat.allCatalogWords.has(bf));
-			});
-			if (catalogQuote) return catalogQuote;
-		}
-		return quotes[0];
-	}
+	// The first quote names the reported finding. Later quotes may show context
+	// or alternatives and cannot rescue an invalid primary claim.
+	if (quotes.length > 0) return quotes[0];
 	const codeMatch = /`([^`]+)`/.exec(stripped);
 	if (codeMatch) return codeMatch[1].trim();
 	const boldMatch = /\*\*([a-zA-Z0-9_\s-]+)\*\*/.exec(stripped);
@@ -308,8 +299,11 @@ function validateDetectAudit(fixture, response, cat) {
 	let currentSeverity = null;
 
 	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i].trim();
+		const rawLine = lines[i];
+		const line = rawLine.trim();
 		if (!line || line === '---') continue;
+		// Evidence nested beneath a finding is context, not another finding.
+		if (/^\s{2,}[-*]\s+(?:Evidence|Example|Context|Source):/i.test(rawLine)) continue;
 
 		const headerMatch = /^(?:#{1,6}\s*|\*\*|\*)?\b(P[012])\b/i.exec(line);
 		const isBullet = /^(?:[-*]|\d+\.)\s+/.test(line);
@@ -323,13 +317,14 @@ function validateDetectAudit(fixture, response, cat) {
 			continue;
 		}
 
-		if (/^no\s+.*found\.?$/i.test(line) || /^none\.?$/i.test(line)) {
+		const bulletBody = line.replace(/^(?:[-*]|\d+\.)\s+/, '').trim();
+		if (/^no\s+.*found\.?$/i.test(bulletBody) || /^none\.?$/i.test(bulletBody)) {
 			continue;
 		}
 
 		if (isBullet) {
 			let severity = currentSeverity;
-			const explicitSevMatch = /\b(P\d+)\b/i.exec(line);
+			const explicitSevMatch = /^(?:[-*]|\d+\.)\s+(?:\*\*)?(P\d+)\b/i.exec(line);
 			if (explicitSevMatch) {
 				const label = explicitSevMatch[1].toUpperCase();
 				if (label === 'P0' || label === 'P1' || label === 'P2') {
@@ -442,7 +437,7 @@ function validateDetectAudit(fixture, response, cat) {
 			if (!expectedTier && matchedTemplate) {
 				expectedTier = matchedTemplate.tier;
 			}
-			if (expectedTier && claimedTier !== expectedTier) {
+			if (expectedTier && claimedTier !== (expectedTier === '3-phrase' ? '3' : expectedTier)) {
 				errors.push(`catalog pattern reported under wrong category: "${target}" is Tier ${expectedTier}, reported under Tier ${claimedTier}`);
 			}
 		}
@@ -505,6 +500,12 @@ function validateDetectAudit(fixture, response, cat) {
 			const escaped = cleanTarget.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 			const count = (sourceText.match(new RegExp(`\\b${escaped}\\b`, 'gi')) || []).length;
 			if (count < threshold) errors.push(`sub-threshold Tier 3 match reported as finding: "${f.line.trim()}"`);
+		}
+		if (cat.catalogByTier['3-phrase'].has(cleanTarget)) {
+			const phraseRegex = p => new RegExp(`\\b${p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/[- ]+/g, '[- ]+')}\\b`, 'gi');
+			const repeated = [...sourceText.matchAll(phraseRegex(cleanTarget))].length >= 2;
+			const distinct = [...cat.catalogByTier['3-phrase']].filter(p => phraseRegex(p).test(sourceText)).length;
+			if (!repeated && distinct < 3) errors.push(`sub-threshold Tier 3 phrase reported as finding: "${f.line.trim()}"`);
 		}
 	}
 
