@@ -371,7 +371,11 @@ const AIDetector = (() => {
     // "The library features support for..." is a verb.
     // "Security features support for..." is a plural noun subject + verb.
     if (FEATURES_VERB_SUBJECTS.test(before) && /^\s+support\s+for\b/i.test(after)) {
-      const hasPluralDeterminer = /\b(?:these|those|all|some|many|few|various|multiple|several|both|\d+|two|three|four|five|six|seven|eight|nine|ten)\s+(?:[\w-]+\s+){1,2}$/i.test(before);
+      const hasPluralDeterminer = /\b(?:these|those|all|some|many|few|various|multiple|several|both)\s+(?:[\w-]+\s+){1,2}$/i.test(before);
+      // Count words modify "features" only when they follow its determiner.
+      // A digit inside a product name ("This Windows 11 app") or a date before
+      // the subject ("In 2024 the library") is not a plural count.
+      const hasPluralCount = /\b(?:the|a|an|this|that|my|our|your|their|its|his|her|each|every)\s+(?:\d+|two|three|four|five|six|seven|eight|nine|ten)\s+(?:[\w-]+\s+){1,2}$/i.test(before);
       const extendedAfter = text.slice(end, end + 100);
       // A predicate inside a relative clause modifying the object (e.g. "teams that connect and remain online")
       // is not coordinated with the main subject. Limit predicate search to the direct prepositional object.
@@ -383,17 +387,17 @@ const AIDetector = (() => {
       // "a suite of system features" still has plural noun "features".
       // "that" can introduce a clause and "which" can determine plural nouns.
       // A relative pronoun needs its own determiner-led subject evidence.
-      const hasUnambiguousSingular = /\b(?:a|an|this|that|every|each|one)\s+(?:(?!(?:of|for|in|with|and|or|which|what|that|who|\d+|two|three|four|five|six|seven|eight|nine|ten|multiple|several|many|few|both|various)\b)[\w-]+\s+){1,3}$/i.test(before)
+      const hasUnambiguousSingular = /\b(?:a|an|this|that|every|each|one)\s+(?:(?!(?:of|for|in|with|and|or|which|what|that|who|two|three|four|five|six|seven|eight|nine|ten|multiple|several|many|few|both|various)\b)[\w-]+\s+){1,3}$/i.test(before)
         || /\b(?:it|he|she)\s+$/i.test(before)
         || /\b(?:a|an|this|that|each|every|one)\s+[\w-]+\s+(?:which|that|who)\s+$/i.test(before);
 
       const hasSingularEvidence = hasUnambiguousSingular
-        || /\b(?:the|my|our|your|their|its|his|her)\s+(?:(?!(?:of|for|in|with|and|or|which|what|that|who|\d+|two|three|four|five|six|seven|eight|nine|ten|multiple|several|many|few|both|various)\b)[\w-]+\s+){1,3}$/i.test(before)
+        || /\b(?:the|my|our|your|their|its|his|her)\s+(?:(?!(?:of|for|in|with|and|or|which|what|that|who|two|three|four|five|six|seven|eight|nine|ten|multiple|several|many|few|both|various)\b)[\w-]+\s+){1,3}$/i.test(before)
         || /\b(?:the|my|our|your|their|its|his|her)\s+[\w-]+\s+(?:which|that|who)\s+$/i.test(before);
       
       // Unambiguous singular subjects ("It", "This app") cannot be plural-noun phrases,
       // so hasForObject ("support for loops") only suppresses ambiguous determiners ("The library").
-      if (!hasPluralDeterminer && !hasPluralPredicate && (hasUnambiguousSingular || (!hasForObject && hasSingularEvidence))) {
+      if (!hasPluralDeterminer && !hasPluralCount && !hasPluralPredicate && (hasUnambiguousSingular || (!hasForObject && hasSingularEvidence))) {
         return false;
       }
     }
