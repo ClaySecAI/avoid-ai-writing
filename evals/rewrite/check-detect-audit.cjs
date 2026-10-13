@@ -164,6 +164,16 @@ function loadCatalog(repoPath) {
 		}
 	}
 
+	// Explicitly named structural patterns also belong to the catalog, even
+	// though they live outside the replacement tables.
+	const chatbotArtifacts = new Set([
+		'i hope this helps', 'certainly', 'absolutely', 'great question',
+		'feel free to reach out', 'let me know if you need anything else',
+	]);
+	for (const artifact of chatbotArtifacts) {
+		allCatalogWords.add(artifact);
+	}
+
 	const genericConclusions = new Set([
 		'the future looks bright',
 		'only time will tell',
@@ -172,6 +182,7 @@ function loadCatalog(repoPath) {
 	]);
 
 	const canonicalSeverities = new Map();
+	for (const artifact of chatbotArtifacts) canonicalSeverities.set(artifact, 'P0');
 	for (const w of catalogByTier['1A']) {
 		if (genericConclusions.has(w)) {
 			canonicalSeverities.set(w, 'P2');
@@ -297,23 +308,27 @@ function validateDetectAudit(fixture, response, cat) {
 	const lines = issuesText.split('\n');
 	const findings = [];
 	let currentSeverity = null;
+	let currentTierSection = null;
 
 	for (let i = 0; i < lines.length; i++) {
 		const rawLine = lines[i];
 		const line = rawLine.trim();
 		if (!line || line === '---') continue;
-		// Evidence nested beneath a finding is context, not another finding.
-		if (/^\s{2,}[-*]\s+(?:Evidence|Example|Context|Source):/i.test(rawLine)) continue;
+		// An indented sub-bullet is context for its parent finding.
+		if (/^\s{2,}[-*]\s+/.test(rawLine)) continue;
 
 		const headerMatch = /^(?:#{1,6}\s*|\*\*|\*)?\b(P[012])\b/i.exec(line);
 		const isBullet = /^(?:[-*]|\d+\.)\s+/.test(line);
 
 		if (headerMatch && !isBullet) {
 			currentSeverity = headerMatch[1].toUpperCase();
+			currentTierSection = null;
 			continue;
 		}
 
-		if (!isBullet && /^(?:#{1,6}\s*|\*\*|\*)?(?:Tier\s*1A|Tier\s*1B|Tier\s*2|Tier\s*3)/i.test(line)) {
+		if (!isBullet && /^(?:#{1,6}\s*|\*\*|\*)?Tier\s*(1A|1B|2|3)\b/i.test(line)) {
+			currentTierSection = /Tier\s*(1A|1B|2|3)/i.exec(line)[1].toUpperCase();
+			currentSeverity = null;
 			continue;
 		}
 
@@ -333,7 +348,7 @@ function validateDetectAudit(fixture, response, cat) {
 					severity = null;
 				}
 			}
-			findings.push({ severity, line, rawExplicitSev: explicitSevMatch ? explicitSevMatch[1] : null });
+			findings.push({ severity, line, tierSection: currentTierSection, rawExplicitSev: explicitSevMatch ? explicitSevMatch[1] : null });
 		} else if (findings.length > 0 && /^\s{2,}\S/.test(lines[i])) {
 			// Only an indented Markdown continuation belongs to the prior bullet.
 			findings[findings.length - 1].line += ' ' + line;
@@ -345,10 +360,6 @@ function validateDetectAudit(fixture, response, cat) {
 	const paraTier2Counts = sourceParagraphs.map(p => getTier2MatchesInParagraph(p, cat.catalogByTier['2'] || new Set()));
 
 	for (const f of findings) {
-		if (!f.severity) {
-			errors.push(`finding missing canonical severity tier (P0, P1, P2): "${f.line.trim()}"`);
-		}
-
 		const target = getTargetPattern(f.line, cat);
 		if (!target) {
 			errors.push(`unrecognized finding format (could not extract target pattern): "${f.line.trim()}"`);
@@ -360,22 +371,15 @@ function validateDetectAudit(fixture, response, cat) {
 
 		const matchedTemplate = (cat.templates || []).find(t => cleanTarget === t.raw || t.regex.test(cleanTarget));
 
-		let matchedTransition = null;
-		if (cat.transitionPhrases.has(cleanTarget)) {
-			matchedTransition = cleanTarget;
-		} else {
-			for (const tp of cat.transitionPhrases) {
-				const tpRegex = new RegExp(`\\b${tp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-				if (tpRegex.test(cleanTarget)) {
-					matchedTransition = tp;
-					break;
-				}
-			}
-		}
+		const matchedTransition = cat.transitionPhrases.has(cleanTarget) ? cleanTarget : null;
 
 		const targetWords = cleanTarget.split(/\s+/);
 		const isSingleWord = targetWords.length === 1;
 		const targetBases = getBaseForms(cleanTarget);
+		const unmappedTier = cat.catalogByTier['1B'].has(cleanTarget) || cat.catalogByTier['3'].has(cleanTarget);
+		if (!f.severity && (f.rawExplicitSev || !unmappedTier || !['1B', '3'].includes(f.tierSection))) {
+			errors.push(`finding missing canonical severity tier (P0, P1, P2): "${f.line.trim()}"`);
+		}
 
 		const isCatalogPattern = Boolean(
 			cat.allCatalogWords.has(cleanTarget) ||

@@ -119,6 +119,18 @@ assert(inspect(phraseFix, phraseResp, repo, cat).errors.some(e => e.includes('su
 const repeatedPhrase = { ...phraseFix, source: 'User engagement improved, but user engagement was uneven across regions.' };
 assert.equal(inspect(repeatedPhrase, phraseResp, repo, cat).errors.length, 0);
 
+const transitionShadow = `**1. Issues found**\n- **P2**: "Moreover, the platform unlocks efficiency" — transition.\n**2. Assessment**\n- Clear issue.`;
+assert(inspect({ ...detectFixture, source: 'Moreover, this is fine.' }, transitionShadow, repo, cat).errors.some(e => e.includes('not grounded in pattern catalog')));
+
+const chatbotResp = `**1. Issues found**\n- **P0**: "Certainly!" — chatbot artifact.\n**2. Assessment**\n- Clear issue.`;
+assert.equal(inspect({ ...detectFixture, source: 'Certainly! Here is the summary.' }, chatbotResp, repo, cat).errors.length, 0);
+
+const tier1bResp = `**1. Issues found**\n**Tier 1B clarity edits**\n- "in order to" → "to"\n**2. Assessment**\n- Wordiness fix.`;
+assert.equal(inspect({ ...detectFixture, source: 'We did this in order to finish.' }, tier1bResp, repo, cat).errors.length, 0);
+
+const nestedSuggestion = `**1. Issues found**\n- **P1**: "robust" — Tier 1A marker.\n  - Suggested: "strong"\n**2. Assessment**\n- Clear issue.`;
+assert.equal(inspect({ ...detectFixture, source: 'This is a robust platform.' }, nestedSuggestion, repo, cat).errors.length, 0);
+
 // 4. Historical Claude negative controls (cycle 2, cycle 3, cycle 5)
 const c2Path = path.join(repo, 'evals/rewrite/reports/automated-stack-295-296-2026-09-16/literal-checks/isolated-cycle2-claude-responses.json');
 if (fs.existsSync(c2Path)) {
