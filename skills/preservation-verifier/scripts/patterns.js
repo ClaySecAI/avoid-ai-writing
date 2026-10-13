@@ -377,10 +377,11 @@ const AIDetector = (() => {
       // Count words modify "features" only when they follow its determiner.
       // A digit inside a product name ("This Windows 11 app") or a date before
       // the subject ("In 2024 the library") is not a plural count.
-      const hasPluralCount = /\b(?:the|a|an|this|that|my|our|your|their|its|his|her|each|every)\s+(?:\d{1,3}|two|three|four|five|six|seven|eight|nine|ten)\s+(?:[\w-]+\s+){1,2}$/i.test(before);
+      const hasPluralCount = /\b(?:the|a|an|this|that|my|our|your|their|its|his|her|each|every)\s+(?:\d{1,2}|two|three|four|five|six|seven|eight|nine|ten)\s+(?:[\w-]+\s+){1,2}$/i.test(before);
       const extendedAfter = text.slice(end, end + 100);
       // A predicate inside a relative clause modifying the object (e.g. "teams that connect and remain online")
       // is not coordinated with the main subject. Limit predicate search to the direct prepositional object.
+      const hasPartitivePlural = /\b(?:all|some|many|most|few|several|both|\d+|two|three|four|five|six|seven|eight|nine|ten)\s+of\s+(?:the|my|our|your|their|its|his|her)\s+(?:[\w-]+\s+){1,3}$/i.test(before);
       const hasPluralPredicate = /^\s+support\s+for(?:(?!\b(?:that|which|who|whom|whose|where|when)\b)[^.?!;]){0,80}?\b(?:and|but|or|nor)\s+(?:are|were|have|do|reject|accept|allow|deny|provide|require|use|make|work|help|give|take|need|become|seem|look|show|include|offer|support|remain|fail|pass|lack|prefer|choose|prevent|stop)\b/i.test(extendedAfter);
       const hasForObject = /^\s+support\s+for(?:-|\s+)(?:profit|loops?)\b/i.test(after);
       // Numeric modifiers and plural cues exclude a singular-subject reading:
@@ -399,7 +400,7 @@ const AIDetector = (() => {
       
       // Unambiguous singular subjects ("It", "This app") cannot be plural-noun phrases,
       // so hasForObject ("support for loops") only suppresses ambiguous determiners ("The library").
-      if (!hasPluralDeterminer && !hasPluralCount && !hasPluralPredicate && (hasUnambiguousSingular || (!hasForObject && hasSingularEvidence))) {
+      if (!hasPluralDeterminer && !hasPluralCount && !hasPartitivePlural && !hasPluralPredicate && (hasUnambiguousSingular || (!hasForObject && hasSingularEvidence))) {
         return false;
       }
     }
