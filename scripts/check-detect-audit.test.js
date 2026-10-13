@@ -128,6 +128,12 @@ assert.equal(inspect({ ...detectFixture, source: 'Certainly! Here is the summary
 const tier1bResp = `**1. Issues found**\n**Tier 1B clarity edits**\n- "in order to" → "to"\n**2. Assessment**\n- Wordiness fix.`;
 assert.equal(inspect({ ...detectFixture, source: 'We did this in order to finish.' }, tier1bResp, repo, cat).errors.length, 0);
 
+const tierUnderSeverity = `**1. Issues found**\n**P1**\n**Tier 1A**\n- "robust" — frequency marker.\n**2. Assessment**\n- Clear issue.`;
+assert.equal(inspect({ ...detectFixture, source: 'This is a robust platform.' }, tierUnderSeverity, repo, cat).errors.length, 0);
+
+const nestedFinding = `**1. Issues found**\n- **P1**: "robust" — Tier 1A marker.\n  - "unlocks efficiency"\n  - "explore" (P2)\n**2. Assessment**\n- Clear issue.`;
+assert(inspect({ ...detectFixture, source: 'This is a robust platform.' }, nestedFinding, repo, cat).errors.some(e => e.includes('not grounded in pattern catalog')));
+
 const nestedSuggestion = `**1. Issues found**\n- **P1**: "robust" — Tier 1A marker.\n  - Suggested: "strong"\n**2. Assessment**\n- Clear issue.`;
 assert.equal(inspect({ ...detectFixture, source: 'This is a robust platform.' }, nestedSuggestion, repo, cat).errors.length, 0);
 

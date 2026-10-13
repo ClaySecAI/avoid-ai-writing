@@ -315,7 +315,7 @@ function validateDetectAudit(fixture, response, cat) {
 		const line = rawLine.trim();
 		if (!line || line === '---') continue;
 		// An indented sub-bullet is context for its parent finding.
-		if (/^\s{2,}[-*]\s+/.test(rawLine)) continue;
+		if (/^\s{2,}[-*]\s+(?:Evidence|Example|Context|Source|Suggested|Fix|Replacement):/i.test(rawLine)) continue;
 
 		const headerMatch = /^(?:#{1,6}\s*|\*\*|\*)?\b(P[012])\b/i.exec(line);
 		const isBullet = /^(?:[-*]|\d+\.)\s+/.test(line);
@@ -328,7 +328,7 @@ function validateDetectAudit(fixture, response, cat) {
 
 		if (!isBullet && /^(?:#{1,6}\s*|\*\*|\*)?Tier\s*(1A|1B|2|3)\b/i.test(line)) {
 			currentTierSection = /Tier\s*(1A|1B|2|3)/i.exec(line)[1].toUpperCase();
-			currentSeverity = null;
+			if (currentTierSection === '1B' || currentTierSection === '3') currentSeverity = null;
 			continue;
 		}
 
