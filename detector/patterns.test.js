@@ -1414,6 +1414,8 @@ test('features: residual precision checks from #384', () => {
     'Two of the platform features support for older protocols on devices without acceleration.',
     'The twelve platform features support for older protocols on devices without hardware acceleration.',
     'The 100 platform features support for older protocols on devices without hardware acceleration.',
+    'The 150 library features support for older protocols on devices without hardware acceleration.',
+    'The 100 new platform features support for older protocols on devices without hardware acceleration.',
     'Both system features support for older protocols on devices without hardware acceleration.',
     'The system features support for older protocols and remain enabled by default.',
     'We compare a suite of system features support for legacy applications.',
