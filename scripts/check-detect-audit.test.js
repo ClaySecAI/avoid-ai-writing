@@ -75,6 +75,26 @@ const unicornResp = `**1. Issues found**\n\n- **P1**: "robust unicorn" — fabri
 const unicornRes = inspect(unicornFix, unicornResp, repo, cat);
 assert(unicornRes.errors.some(e => e.includes('not grounded in pattern catalog')), 'robust unicorn must be rejected');
 
+// A standalone prose line must not change the category of the prior bullet.
+const proseFix = { ...detectFixture, source: 'This is a robust platform for testing.' };
+const proseResp = `**1. Issues found**\n**P1**\n- "robust" — Tier 1A marker.\nIsolated Tier 2 matches are covered in Assessment.\n**2. Assessment**\n- Clear issue.`;
+assert.equal(inspect(proseFix, proseResp, repo, cat).errors.length, 0);
+
+// Tier 3 requires repetition of one listed form, not combined forms.
+const tier3Fix = { ...detectFixture, source: 'This project has significant coverage across all regions and the team tests every deployment before release.' };
+const tier3Resp = `**1. Issues found**\n- **P2**: "significant" — Tier 3 density finding.\n**2. Assessment**\n- Clear issue.`;
+assert(inspect(tier3Fix, tier3Resp, repo, cat).errors.some(e => e.includes('sub-threshold Tier 3')));
+const tier3Repeated = { ...tier3Fix, source: 'Significant coverage, significant testing, and significant progress were reported by the team.' };
+assert.equal(inspect(tier3Repeated, tier3Resp, repo, cat).errors.length, 0);
+
+const tapestriesFix = { ...detectFixture, source: 'The museum displayed tapestries across the gallery for guests.' };
+const tapestriesResp = `**1. Issues found**\n- **P1**: "tapestries" — Tier 1A marker.\n**2. Assessment**\n- Clear issue.`;
+assert.equal(inspect(tapestriesFix, tapestriesResp, repo, cat).errors.length, 0);
+
+const adverbFix = { ...detectFixture, source: 'The plan is crucially nuanced in its treatment of operational risks.' };
+const adverbResp = `**1. Issues found**\n- **P2**: "crucially" — Tier 2 cluster.\n**2. Assessment**\n- Clear issue.`;
+assert.equal(inspect(adverbFix, adverbResp, repo, cat).errors.length, 0);
+
 // 4. Historical Claude negative controls (cycle 2, cycle 3, cycle 5)
 const c2Path = path.join(repo, 'evals/rewrite/reports/automated-stack-295-296-2026-09-16/literal-checks/isolated-cycle2-claude-responses.json');
 if (fs.existsSync(c2Path)) {

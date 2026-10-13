@@ -191,6 +191,7 @@ function loadCatalog(repoPath) {
 function getBaseForms(word) {
 	word = word.toLowerCase().replace(/[^a-z0-9_-]/g, '');
 	const forms = new Set([word]);
+	if (word.endsWith('ies') || word.endsWith('ied')) forms.add(word.slice(0, -3) + 'y');
 	if (word.endsWith('s') && !word.endsWith('ss')) forms.add(word.slice(0, -1));
 	if (word.endsWith('es')) forms.add(word.slice(0, -2));
 	if (word.endsWith('ed')) {
@@ -243,6 +244,11 @@ function getTier2MatchesInParagraph(para, tier2Patterns) {
 		while ((m = regex.exec(para)) !== null) {
 			matches.push({ pattern, match: m[0], index: m.index });
 		}
+	}
+	// Catalog entries also cover adverbial forms such as crucial -> crucially.
+	for (const m of para.matchAll(/\b[a-z]+ly\b/gi)) {
+		const base = getBaseForms(m[0]).find(form => tier2Patterns.has(form));
+		if (base) matches.push({ pattern: base, match: m[0], index: m.index });
 	}
 	matches.sort((a, b) => a.index - b.index);
 	const deduped = [];
@@ -333,10 +339,9 @@ function validateDetectAudit(fixture, response, cat) {
 				}
 			}
 			findings.push({ severity, line, rawExplicitSev: explicitSevMatch ? explicitSevMatch[1] : null });
-		} else if (findings.length > 0) {
-			if (!/^(?:#{1,6}\s*|\*\*|\*)/.test(line)) {
-				findings[findings.length - 1].line += ' ' + line;
-			}
+		} else if (findings.length > 0 && /^\s{2,}\S/.test(lines[i])) {
+			// Only an indented Markdown continuation belongs to the prior bullet.
+			findings[findings.length - 1].line += ' ' + line;
 		}
 	}
 
@@ -461,10 +466,10 @@ function validateDetectAudit(fixture, response, cat) {
 			errors.push(`catalog pattern reported under wrong severity: "${target}" is ${expectedSeverity}, reported under ${f.severity}`);
 		}
 
-		const isTier2 = (cat.catalogByTier['2'] && (
+		const isTier2 = cat.catalogByTier['2'] && (
 			cat.catalogByTier['2'].has(cleanTarget) ||
 			targetBases.some(bf => cat.catalogByTier['2'].has(bf))
-		)) || /\bTier\s*2\b/i.test(f.line);
+		);
 
 		if (isTier2) {
 			let foundInClusteredPara = false;
@@ -489,6 +494,17 @@ function validateDetectAudit(fixture, response, cat) {
 			if (!foundInClusteredPara) {
 				errors.push(`sub-threshold Tier 2 match reported as finding: "${f.line.trim()}"`);
 			}
+		}
+		const isTier3 = cat.catalogByTier['3'] && (
+			cat.catalogByTier['3'].has(cleanTarget) ||
+			targetBases.some(bf => cat.catalogByTier['3'].has(bf))
+		);
+		if (isTier3) {
+			const wordCount = (sourceText.match(/[\p{L}\p{N}]+(?:['-][\p{L}\p{N}]+)*/gu) || []).length;
+			const threshold = Math.max(3, Math.floor(wordCount * 0.03));
+			const escaped = cleanTarget.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			const count = (sourceText.match(new RegExp(`\\b${escaped}\\b`, 'gi')) || []).length;
+			if (count < threshold) errors.push(`sub-threshold Tier 3 match reported as finding: "${f.line.trim()}"`);
 		}
 	}
 
@@ -537,6 +553,9 @@ function runNamedMutationControls(repo, fixtures, responses, cat) {
 	};
 	const noopFixture = fixtures.scenarios.find(f => f.id === 'noop');
 	const protectedFixture = fixtures.scenarios.find(f => f.id === 'protected');
+	const controlFile = path.join(path.resolve(repo), 'evals/rewrite/reports/automated-stack-295-296-2026-09-16/literal-checks/isolated-cycle2-mimo-responses.json');
+	const controlResponses = JSON.parse(fs.readFileSync(controlFile, 'utf8').replace(/^\uFEFF/, ''));
+	assert(protectedFixture && noopFixture, 'protected and noop control fixtures are required');
 
 	function register(name, fn) {
 		try {
@@ -562,34 +581,26 @@ function runNamedMutationControls(repo, fixtures, responses, cat) {
 
 	// 1: Protected literal URL mutation must fail
 	register('protected_exact_mutation', () => {
-		if (protectedFixture && responses && responses.protected) {
-			const res = inspect(protectedFixture, responses.protected.replaceAll('https://status.example.test/v2', 'https://wrong.example/v3'), repo, cat);
-			assert(res.errors.length > 0, 'mutated URL must fail');
-		}
+		const res = inspect(protectedFixture, controlResponses.protected.replaceAll('https://status.example.test/v2', 'https://wrong.example/v3'), repo, cat);
+		assert(res.errors.length > 0, 'mutated URL must fail');
 	});
 
 	// 2: No-op source change mutation must fail
 	register('noop_source_mutation', () => {
-		if (noopFixture && responses && responses.noop) {
-			const res = inspect(noopFixture, responses.noop.replace('The migration starts Tuesday.', 'The migration starts Wednesday.'), repo, cat);
-			assert(res.errors.length > 0, 'mutated noop source must fail');
-		}
+		const res = inspect(noopFixture, controlResponses.noop.replace('The migration starts Tuesday.', 'The migration starts Wednesday.'), repo, cat);
+		assert(res.errors.length > 0, 'mutated noop source must fail');
 	});
 
 	// 3: BOM in no-op must be tolerated
 	register('noop_bom_preservation', () => {
-		if (noopFixture && responses && responses.noop) {
-			const res = inspect(noopFixture, '\uFEFF' + responses.noop.replace(/^\uFEFF/, ''), repo, cat);
-			assert.equal(res.errors.length, 0, 'BOM must be ignored');
-		}
+		const res = inspect(noopFixture, '\uFEFF' + controlResponses.noop.replace(/^\uFEFF/, ''), repo, cat);
+		assert.equal(res.errors.length, 0, 'BOM must be ignored');
 	});
 
 	// 4: Separator before verification must be tolerated
 	register('noop_separator_preservation', () => {
-		if (noopFixture && responses && responses.noop) {
-			const res = inspect(noopFixture, responses.noop.replace(/(\n(?:## |\*\*)Verification)/, '\n\n---\n$1'), repo, cat);
-			assert.equal(res.errors.length, 0, 'separator before verification must pass');
-		}
+		const res = inspect(noopFixture, controlResponses.noop.replace(/(\n(?:## |\*\*)Verification)/, '\n\n---\n$1'), repo, cat);
+		assert.equal(res.errors.length, 0, 'separator before verification must pass');
 	});
 
 	// 5: Detect mode Final rewrite rejection
@@ -709,7 +720,7 @@ function runNamedMutationControls(repo, fixtures, responses, cat) {
 	register('detect_tier2_exempt_context', () => {
 		const fix = { ...detectFixture, source: 'We harness the power to streamline deeply nested logic.' };
 		const resp = `**1. Issues found**\n\n- **P2**: "deeply nested" — Tier 2 finding.\n- **P2**: "harness" — Tier 2 finding.\n- **P2**: "streamline" — Tier 2 finding.\n\n**2. Assessment**\n- Notes.\n`;
-		assertFails(fix, resp, 'sub-threshold Tier 2', 'exempt Tier 2 usage inside cluster must fail');
+		assertFails(fix, resp, 'not grounded in pattern catalog', 'exempt Tier 2 usage inside cluster must fail');
 	});
 
 	// 23: Tier 2 plural inflections pass
@@ -794,44 +805,36 @@ function runNamedMutationControls(repo, fixtures, responses, cat) {
 	// 35: Historical cycle2 Claude negative control — audit violations detected
 	register('detect_historical_claude_cycle2_regression', () => {
 		const c2File = path.join(path.resolve(repo), 'evals/rewrite/reports/automated-stack-295-296-2026-09-16/literal-checks/isolated-cycle2-claude-responses.json');
-		if (fs.existsSync(c2File)) {
-			const c2Resp = JSON.parse(fs.readFileSync(c2File, 'utf8').replace(/^\uFEFF/, '')).detect_only;
-			const res = inspect(detectFixture, c2Resp, repo, cat);
-			assert(res.errors.length > 0, 'historical cycle2 Claude must be flagged for audit violations');
-			assert(res.errors.some(e => e.includes('wrong severity') && e.includes('Moreover')), 'must flag Moreover wrong severity');
-		}
+		const c2Resp = JSON.parse(fs.readFileSync(c2File, 'utf8').replace(/^\uFEFF/, '')).detect_only;
+		const res = inspect(detectFixture, c2Resp, repo, cat);
+		assert(res.errors.length > 0, 'historical cycle2 Claude must be flagged for audit violations');
+		assert(res.errors.some(e => e.includes('wrong severity') && e.includes('Moreover')), 'must flag Moreover wrong severity');
 	});
 
 	// 36: Historical cycle3 Claude negative control — audit violations detected
 	register('detect_historical_claude_cycle3_regression', () => {
 		const c3File = path.join(path.resolve(repo), 'evals/rewrite/reports/automated-stack-295-296-2026-09-16/literal-checks/isolated-cycle3-claude-responses.json');
-		if (fs.existsSync(c3File)) {
-			const c3Resp = JSON.parse(fs.readFileSync(c3File, 'utf8').replace(/^\uFEFF/, '')).detect_only;
-			const res = inspect(detectFixture, c3Resp, repo, cat);
-			assert(res.errors.length > 0, 'historical cycle3 Claude must be flagged for audit violations');
-			assert(res.errors.some(e => e.includes('Moreover')), 'must flag Moreover wrong severity');
-		}
+		const c3Resp = JSON.parse(fs.readFileSync(c3File, 'utf8').replace(/^\uFEFF/, '')).detect_only;
+		const res = inspect(detectFixture, c3Resp, repo, cat);
+		assert(res.errors.length > 0, 'historical cycle3 Claude must be flagged for audit violations');
+		assert(res.errors.some(e => e.includes('Moreover')), 'must flag Moreover wrong severity');
 	});
 
 	// 37: Historical cycle5 Claude negative control — audit violations detected
 	register('detect_historical_claude_cycle5_regression', () => {
 		const c5File = path.join(path.resolve(repo), 'evals/rewrite/reports/automated-stack-295-296-2026-09-16/isolated-cycle5/claude-responses.json');
-		if (fs.existsSync(c5File)) {
-			const c5Resp = JSON.parse(fs.readFileSync(c5File, 'utf8').replace(/^\uFEFF/, '')).detect_only;
-			const res = inspect(detectFixture, c5Resp, repo, cat);
-			assert(res.errors.length > 0, 'historical cycle5 Claude must be flagged for audit violations');
-			assert(res.errors.some(e => e.includes('unlocks efficiency')), 'must flag unlocks efficiency ungrounded');
-		}
+		const c5Resp = JSON.parse(fs.readFileSync(c5File, 'utf8').replace(/^\uFEFF/, '')).detect_only;
+		const res = inspect(detectFixture, c5Resp, repo, cat);
+		assert(res.errors.length > 0, 'historical cycle5 Claude must be flagged for audit violations');
+		assert(res.errors.some(e => e.includes('unlocks efficiency')), 'must flag unlocks efficiency ungrounded');
 	});
 
 	// 38: Compliant MiMo cycle2 positive control — passes with 0 errors
 	register('detect_mimo_cycle2_compliant_passes', () => {
 		const m2File = path.join(path.resolve(repo), 'evals/rewrite/reports/automated-stack-295-296-2026-09-16/literal-checks/isolated-cycle2-mimo-responses.json');
-		if (fs.existsSync(m2File)) {
-			const m2Resp = JSON.parse(fs.readFileSync(m2File, 'utf8').replace(/^\uFEFF/, '')).detect_only;
-			const res = inspect(detectFixture, m2Resp, repo, cat);
-			assert.equal(res.errors.length, 0, 'compliant cycle2 MiMo detect response must pass with 0 errors');
-		}
+		const m2Resp = JSON.parse(fs.readFileSync(m2File, 'utf8').replace(/^\uFEFF/, '')).detect_only;
+		const res = inspect(detectFixture, m2Resp, repo, cat);
+		assert.equal(res.errors.length, 0, 'compliant cycle2 MiMo detect response must pass with 0 errors');
 	});
 
 	const executed = results.length;
