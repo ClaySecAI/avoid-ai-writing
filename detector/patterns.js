@@ -377,7 +377,7 @@ const AIDetector = (() => {
       // Count words modify "features" only when they follow its determiner.
       // A digit inside a product name ("This Windows 11 app") or a date before
       // the subject ("In 2024 the library") is not a plural count.
-      const hasPluralCount = /\b(?:the|a|an|this|that|my|our|your|their|its|his|her|each|every)\s+(?:(?:\d{1,2}|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|dozen)\s+(?:[\w-]+\s+){1,2}|(?!(?:19|20)\d{2}\s)\d{3,}\s+(?!(?:[\w-]+\s+)?(?:app|release)\s+$)(?:[\w-]+\s+){1,2})$/i.test(before);
+      const hasPluralCount = /\b(?:the|a|an|this|that|my|our|your|their|its|his|her|each|every)\s+(?:(?:\d{1,2}|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|dozen)\s+(?:[\w-]+\s+){1,2}|(?!(?:19|20)\d{2}\s)\d{3,}\s+(?!(?:[\w-]+\s+)?(?:app|release|model|version|update)\s+$)(?:[\w-]+\s+){1,2})$/i.test(before);
       const extendedAfter = text.slice(end, end + 100);
       // A predicate inside a relative clause modifying the object (e.g. "teams that connect and remain online")
       // is not coordinated with the main subject. Limit predicate search to the direct prepositional object.
