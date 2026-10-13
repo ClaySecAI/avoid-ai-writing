@@ -1384,6 +1384,8 @@ test('features: residual precision checks from #384', () => {
     'The 2024 release features support for dark mode across every region we serve.',
     'The 365 app features support for offline mode across every region we serve.',
     'Our 2024 release features support for offline caching across every region we serve.',
+    'The 2024 model features support for dark mode across the whole platform.',
+    'The 2025 update features support for offline caching across every region.',
     'Many say it features support for dark mode across all supported devices.',
     'Some say it features support for older protocols across every region.',
     'We tested a library which features support for both protocols seamlessly.',
