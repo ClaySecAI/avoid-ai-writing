@@ -10,8 +10,11 @@ All notable changes to this project are documented here.
 
 - Replaced placeholder instructions and empty suggestions in the word replacement tables with concrete, direct alternatives for previously incomplete entries (#215).
 - Removed `breakthrough` from the `game-changer` / `game-changing` suggestions to avoid preserving unsupported importance claims. Added missing context fallbacks and adjective/noun clarifications for `transformative`, `paradigm-shifting`, and `despite challenges` (#380).
+- Ground model-only `detect` audit findings in the pattern catalog: report only catalog patterns with canonical categories and severities (e.g., transition phrases and generic conclusions under P2), support catalog-defined adverbial base forms (e.g. `robustly`, `comprehensively`), exclude suggested replacement alternatives, and omit sub-threshold Tier 2 and Tier 3 matches from standalone issues (#323). Added standalone `evals/rewrite/check-detect-audit.cjs` and a regression suite with executed mutation controls, while preserving original pinned `check-literals.cjs` for dated report reproducibility.
 
 ### Fixed
+
+- Recognize Markdown setext heading underlines (including two-hyphen level-2 underlines) alongside thematic breaks as sentence boundaries so surrounding blocks do not share homoglyph script evidence (#390).
 
 - Short Russian words in Russian technical prose with English terms ("`make_json_safe()` на Enum", "r/StableDiffusion от 07.10") are no longer read as homoglyph swaps. The lookalike rule now decides per sentence: a dot inside a date or a version and a hard line wrap no longer end it, and a word spelled entirely in lookalike letters is swapped only when its sentence has no Russian or Greek letter that is not a lookalike (follow-up to #352). Sentence punctuation, Markdown separators/tables and HTML block starts keep unrelated blocks separate. Fully substituted words beside Russian or Greek prose, including across plain hard wraps, remain a documented detection limit.
 - Disambiguate "features support for" detection to flag verb uses with definite, possessive, and singular subject determiners, including versioned product names ("The library features support for...", "This Windows 11 app features support for..."), while preserving plural-noun readings with programming keyword objects and compound predicates (#387).
