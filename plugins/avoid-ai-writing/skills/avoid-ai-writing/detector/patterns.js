@@ -371,11 +371,13 @@ const AIDetector = (() => {
     // "The library features support for..." is a verb.
     // "Security features support for..." is a plural noun subject + verb.
     if (FEATURES_VERB_SUBJECTS.test(before) && /^\s+support\s+for\b/i.test(after)) {
+      // A nearby quantifier in an earlier clause cannot make a singular pronoun plural.
+      if (/\b(?:it|he|she)\s+$/i.test(before)) return false;
       const hasPluralDeterminer = /\b(?:these|those|all|some|many|few|various|multiple|several|both)\s+(?:[\w-]+\s+){1,2}$/i.test(before);
       // Count words modify "features" only when they follow its determiner.
       // A digit inside a product name ("This Windows 11 app") or a date before
       // the subject ("In 2024 the library") is not a plural count.
-      const hasPluralCount = /\b(?:the|a|an|this|that|my|our|your|their|its|his|her|each|every)\s+(?:\d+|two|three|four|five|six|seven|eight|nine|ten)\s+(?:[\w-]+\s+){1,2}$/i.test(before);
+      const hasPluralCount = /\b(?:the|a|an|this|that|my|our|your|their|its|his|her|each|every)\s+(?:\d{1,3}|two|three|four|five|six|seven|eight|nine|ten)\s+(?:[\w-]+\s+){1,2}$/i.test(before);
       const extendedAfter = text.slice(end, end + 100);
       // A predicate inside a relative clause modifying the object (e.g. "teams that connect and remain online")
       // is not coordinated with the main subject. Limit predicate search to the direct prepositional object.
