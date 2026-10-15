@@ -76,7 +76,8 @@ prose statement of the engine `type` total against `TYPE_LABELS`.
 > corroborating signal in plain-text contexts and excludes apostrophes. The two
 > agree in spirit (curly punctuation is never conclusive on its own) but differ in
 > mechanism — so this is a partial map, not 1:1.
-> `performed-insight` omits literal "the punchline" and "worth naming" senses;
+> `performed-insight` omits "the punchline", "worth naming", and
+> "X is dead; long live Y" because legitimate uses need reading;
 > `dev-blog-boilerplate` omits literal "batteries included." Those ambiguous
 > surface forms remain judgment rules rather than deterministic matches.
 > `negation-chain` requires three short sentence-initial "no …" items; two-item
@@ -132,6 +133,7 @@ mistake their absence for a coverage gap:
 - Speculative gap-filling *(the same hedges are correct when the source itself is uncertain; the tell is a guess standing in for a missing fact, which a regex can't see)*
 - Infomercial engagement hooks *(the tell is a staged setup-and-reveal, not the words: "honestly" or "look" mid-sentence is ordinary English)*
 - Manufactured punchlines and staccato drama (including repeated setup/reversal punchlines: P2 only when repetition replaces concrete claims; supported reversals and intentional comedy, fiction, speeches, and quotations pass)
+- Performed-insight "X is dead; long live Y" form *(essay titles, supported contrasts, and literal announcements share the wording; judge whether it substitutes for an argument)*
 - Aphorism formulas *(a regex for "X is the Y of Z" would flag ordinary genitive copulas — "Paris is the capital of France")*
 - Stacked rhetorical questions *(interviews, FAQs, and dialogue stack questions legitimately; a regex can't read register)*
 - Same-opener sentence runs *(whether the anaphora is earned is the whole judgment; pronoun-opener runs are ordinary narration)*

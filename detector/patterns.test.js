@@ -3032,6 +3032,24 @@ test('performed-insight: literal punchline and naming senses stay clean', () => 
   assert.equal(hits.length, 0, `false positives: ${JSON.stringify(hits.map((i) => i.text))}`);
 });
 
+test('performed-insight: dead/long-live titles and literal announcements need judgment', () => {
+  const samples = [
+    '# Software Engineering is Dead. Long Live Software Engineering\n\nThe essay compares two definitions of the job and explains which tasks remain.',
+    'The king is dead; long live the king. The herald read the succession announcement outside the palace.',
+    'The old format is dead — long live the new format. The archive retains both versions for readers.',
+  ];
+  for (const sourceMode of ['plain', 'rendered-markdown']) {
+    for (const sample of samples) {
+      const r = AIDetector.analyzeText(sample, { sourceMode });
+      assert.ok(r.stats.wordCount >= 10, 'exercise detection rather than the too-short return');
+      assert.deepEqual(r.issues.filter(i => i.type === 'performed-insight'), [], `${sourceMode}: ${sample}`);
+    }
+    const r = AIDetector.analyzeText(samples[0] + '\n\nSit with that for a moment. The files remain in the archive.', { sourceMode });
+    assert.ok(r.issues.some(i => i.type === 'performed-insight' && /sit with that/i.test(i.text)),
+      'an unrelated deterministic phrase must still fire beside the title');
+  }
+});
+
 test('performed-insight: sentence-initial Turns out keeps a clean text and index', () => {
   const r = AIDetector.analyzeText(
     "A stable introduction goes here. Turns out the service was already running on the host, so the whole incident closed within about fifteen minutes."
