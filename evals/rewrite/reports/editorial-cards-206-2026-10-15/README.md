@@ -4,6 +4,12 @@
 these writing runs do not satisfy a cross-family acceptance gate. No general
 editing-quality or authorship claim follows from this report.
 
+A later [repair follow-up](followup/README.md) retains 32 additional responses
+on twelve independently authored inputs and four known repair cases, after
+integrating v3.38.0 and #406. It tightens judgment preservation and gap reporting.
+That single-family development run still does not satisfy the cross-family gate;
+the initial and revised runs below remain unchanged historical records.
+
 The pilot adds thirteen readable decision cards to existing catalog entries.
 They carry stable editorial IDs, partial detector mappings, applicability
 conditions and edit/keep/gap examples. The mandatory reference, full audit and

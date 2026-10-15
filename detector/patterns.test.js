@@ -581,6 +581,40 @@ test('smart-punct signature is not corroborated by separator-only em dashes', ()
   assert.equal(hits.length, 0, 'separator-only dashes should not complete the co-occurrence signature');
 });
 
+test('#351: house-style punctuation does not change authorship outputs', () => {
+  // Synthetic contract fixtures, not labeled human-corpus evidence. Change
+  // only one apostrophe so word counts, prose dashes, and other hits match.
+  const plain = "The editor's notes arrived before lunch, so Mara read the first page while the room was still empty. The report covers labels, dates, and names — each checked against the signed copy in the archive. A short note explains why the final page has a blank line near the bottom. Nobody changed the order of the entries after the clerk counted them on Friday. Later that day, Jo found the folder beside the door and put it back on the shelf. The key remained with the desk clerk until the next shift began, when a runner came to collect the files.";
+  const prefixes = ['', 'Delve intricate tapestry pivotal meticulous testament vibrant bustling nestled beacon. '];
+  for (const prefix of prefixes) {
+    for (const contextMode of ['general', 'technical', 'marketing', 'personal']) {
+      for (const sourceMode of ['plain', 'rendered-markdown']) {
+        const control = AIDetector.analyzeText(prefix + plain, { contextMode, sourceMode });
+        const result = AIDetector.analyzeText(prefix + plain.replace("editor's", 'editor’s'), { contextMode, sourceMode });
+        assert.ok(control.stats.wordCount >= 80 && control.stats.wordCount < 150);
+        assert.equal(result.stats.wordCount, control.stats.wordCount);
+        if (prefix) {
+          assert.ok(control.score >= 40 && control.score < 70, 'exercise the corroborator classification boundary');
+          assert.equal(control.document_classification, 'MIXED');
+        }
+        const hits = result.issues.filter(i => i.type === 'smart-punct-signature');
+        assert.equal(hits.length, sourceMode === 'plain' ? 1 : 0);
+        if (hits.length) {
+          assert.equal(hits[0].severity, 'low');
+          assert.match(hits[0].suggestion, /not evidence of AI authorship/);
+        }
+        assert.deepEqual(result.issues.filter(i => i.type !== 'smart-punct-signature'), control.issues,
+          'other findings must stay active');
+        for (const field of ['score', 'label', 'document_classification', 'confidence_category']) {
+          assert.equal(result[field], control[field], `${contextMode}/${sourceMode}: typography changed ${field}`);
+        }
+        assert.deepEqual(result.class_probabilities, control.class_probabilities);
+        assert.deepEqual(result.highlight_sentence_for_ai, control.highlight_sentence_for_ai);
+      }
+    }
+  }
+});
+
 test('em-dash detector still fires on mid-sentence splices at the same density', () => {
   const text =
     'The build is fast — under a second — on most machines. The cache helps — especially on cold starts. Deploys run on push — no manual step — and roll back automatically.';
