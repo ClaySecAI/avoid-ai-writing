@@ -70,12 +70,13 @@ prose statement of the engine `type` total against `TYPE_LABELS`.
 | `negative-parallelism` | Negative parallelism | Sentence structure: "It's not X — it's Y" — *partial: the joined frame needs a restated "it / this / that / they" + be after a comma, semicolon, colon, or dash. "isn't just / merely / simply X, it's Y" flags alone; the plain "isn't X, it's Y", "isn't about X, it's about Y", and "isn't only X, it's Y" frames and the split-sentence "isn't just X. It's Y." flag only when another frame starts within three sentences (the same sentence, the next, or the one after) in the same paragraph, so one correction per piece passes and unrelated corrections far apart stay clean. "not only X but Y" and "not X but Y" are ordinary correlatives and stay LLM-judgment, as do the multi-negation countdown and the tailing negation* |
 | `dev-blog-boilerplate` | Dev-blog boilerplate | Dev-blog boilerplate — *partial; literal-sense exclusion documented in references/patterns.md* |
 
-> **Partial map:** `smart-punct-signature` fires only when curly quotes co-occur
-> with an em-dash, an Oxford comma, and clean typing (≥80 words) — never on curly
-> punctuation alone. The references/patterns.md Formatting rule treats curly quotes as a weak,
-> corroborating signal in plain-text contexts and excludes apostrophes. The two
-> agree in spirit (curly punctuation is never conclusive on its own) but differ in
-> mechanism — so this is a partial map, not 1:1.
+> **Partial map:** `smart-punct-signature` is style-only. In plain mode it
+> requires curly punctuation, a prose em dash, an Oxford comma, the existing
+> spacing/contraction checks, and at least 80 words. It emits a low-priority
+> style finding with zero authorship weight and no classifier corroboration;
+> score, label, probabilities, confidence and AI sentence highlights stay
+> unchanged. Rendered-Markdown mode omits it because publication typography
+> should be preserved. Co-occurrence does not establish machine authorship.
 > `performed-insight` omits "the punchline", "worth naming", and
 > "X is dead; long live Y" because legitimate uses need reading;
 > `dev-blog-boilerplate` omits literal "batteries included." Those ambiguous
