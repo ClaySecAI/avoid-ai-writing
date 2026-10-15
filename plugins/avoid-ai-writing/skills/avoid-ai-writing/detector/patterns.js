@@ -1118,7 +1118,8 @@ const AIDetector = (() => {
     /(?:['\u2019]s|\b(?:is|was|are|were))\s+the\s+(?:whole|entire)\s+(?:point|game|ballgame|trick|pitch|idea|play|business\s+model|value\s+proposition)\b/gi,
     /\b(?:that|this)(?:['\u2019]s|\s+(?:is|was))\s+the\s+part\s+(?:that|I|you|we|nobody|no\s+one|most\s+people)\b/gi,
     /\bthe\s+only\s+[\w'\u2019-]+\s+that\s+(?:matters|counts)\b/gi,
-    /\bis\s+dead\s*[.;,:\u2013\u2014]\s*long\s+live\b/gi,
+    // "X is dead; long live Y" also names an essay or a literal succession
+    // announcement. Whether the contrast earns its place needs reading (#351).
     /\b(?:that|this)(?:['\u2019]s|\s+(?:is|was))\s+why\s+[^.!?\n]{0,60}\s+mattered\b/gi,
   ];
 

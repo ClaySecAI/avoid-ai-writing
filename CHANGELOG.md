@@ -14,6 +14,8 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- Keep the "X is dead; long live Y" form as editorial judgment rather than a deterministic `performed-insight` finding. Essay titles, supported contrasts, and literal succession announcements share the wording; other performed-insight phrases still detect (#351).
+
 - Recognize Markdown setext heading underlines (including two-hyphen level-2 underlines) alongside thematic breaks as sentence boundaries so surrounding blocks do not share homoglyph script evidence (#390).
 
 - Short Russian words in Russian technical prose with English terms ("`make_json_safe()` на Enum", "r/StableDiffusion от 07.10") are no longer read as homoglyph swaps. The lookalike rule now decides per sentence: a dot inside a date or a version and a hard line wrap no longer end it, and a word spelled entirely in lookalike letters is swapped only when its sentence has no Russian or Greek letter that is not a lookalike (follow-up to #352). Sentence punctuation, Markdown separators/tables and HTML block starts keep unrelated blocks separate. Fully substituted words beside Russian or Greek prose, including across plain hard wraps, remain a documented detection limit.
