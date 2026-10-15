@@ -20,6 +20,7 @@ adjudication or executed model-provider receipts.
 | False-agency fixture could reward an unjustified edit | Keep the personification contrast and add hidden-choice, supplied-actor and emergent-change cases. Criteria now follow the source's applicability gate. |
 | Generic clean/exhaustive instructions could overstate focused coverage | Both arms receive an explicit coverage instruction: global fidelity/protection still apply, but clean claims, residual review and stop reasons must be limited to assembled families. Model behavior remains to be evaluated. |
 | Recheck: configuration key order changed a supposedly canonical hash | Serialize supported keys in fixed mode/modules order; test reversed key order and reject unknown keys. This final small repair was checked locally after the independent recheck. |
+| PR review: fenced example headings could become separate modules | Recognize heading boundaries outside backtick/tilde fences. A committed-fixture test keeps fake rule/profile headings and shorter nested fences inside the enclosing focused rule. |
 
 The [final full](full-trace.json), [focused](focused-trace.json) and
 [fallback](fallback-trace.json) traces record the final generator and prompt
@@ -30,6 +31,18 @@ matches the canonical flattened policy apart from the shared experimental
 index and coverage instructions. The final traces supersede the earlier
 review's prompt hashes for the repaired tool; earlier artifacts remain
 historical evidence of the findings.
+
+The independent recheck describes its intermediate generator
+`51cd43b41c503e346ca645d26bd9fc5468c11860d64a90973940c13c6fbf9c11`.
+The configuration-hash repair initially produced `70309e5a...`; the subsequent
+fenced-example repair produced the final generator
+`d440af2f1fb749d589c2a5c6463b988146b90c6e1a0a0a4c082501ba517b8bab`.
+All three committed traces were regenerated with that final generator, whose
+exact bytes are retained in [generator-source.js.txt](generator-source.js.txt).
+The earlier recheck remains a historical observation of its named intermediate
+tool, not verification of this final source. Receipt-integrity tests compare
+the final traces to the retained final source; they do not rewrite earlier
+observations to pretend the source never changed.
 
 All 23 npm suites passed; the final targeted suite also passed after the last
 configuration-hash repair. It checks full/focused/fallback assembly, complete

@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
+const crypto = require('node:crypto');
 const { flatten } = require('./flatten-skill');
 const { snapshot, partition, prepare, verify, assemble } = require('./reference-loading');
 
@@ -29,6 +30,28 @@ try {
   assert.throws(() => prepare(commit, pack), /EEXIST/);
   assert.throws(() => prepare('main', path.join(directory, 'bad')), /full commit SHA/);
   assert.equal(verify(pack).manifest.source_commit, commit);
+
+  // Heading-shaped examples are part of their enclosing rule, not modules.
+  // Include a fake profile boundary, tilde fences, indentation, and a shorter
+  // nested backtick run that cannot close the outer fence.
+  const fencedRoot = path.join(directory, 'fenced-source');
+  fs.mkdirSync(path.join(fencedRoot, 'references'), { recursive: true });
+  const example = '````markdown\n### Example heading\n## Context profiles\n```\n### Still an example\n````\n\n  ~~~markdown\n### Tilde example\n  ~~~\n';
+  const fencedReference = '## What to remove or fix\n\n### Formatting\nKeep this rule.\n' + example +
+    '\n### Other rule\nKeep this separate.\n\n## Context profiles\nRequired context.\n\n## Voice profiles\nRequired voice.\n';
+  fs.writeFileSync(path.join(fencedRoot, 'SKILL.md'), sources.entry);
+  fs.writeFileSync(path.join(fencedRoot, 'references/patterns.md'), fencedReference);
+  execFileSync('git', ['init', '-q', fencedRoot]);
+  execFileSync('git', ['add', 'SKILL.md', 'references/patterns.md'], { cwd: fencedRoot });
+  execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Fenced examples'], { cwd: fencedRoot });
+  const fencedCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: fencedRoot, encoding: 'utf8' }).trim();
+  const fencedPack = path.join(directory, 'fenced-pack');
+  prepare(fencedCommit, fencedPack, fencedRoot);
+  const fencedFocus = assemble(fencedPack, { mode: 'focused', modules: ['formatting'] }, fencedRoot);
+  assert(fencedFocus.prompt.includes(example), 'focused assembly dropped part of the rule example');
+  assert(!fencedFocus.trace.assembled_module_ids.some(id => id.includes('example')));
+  assert.deepEqual(partition(fencedReference).map(m => m.id),
+    ['catalog-intro', 'formatting', 'other-rule', 'context-profiles', 'voice-profiles']);
 
   const full = assemble(pack, { mode: 'full' });
   const focused = assemble(pack, { mode: 'focused', modules: ['copula-avoidance'] });
@@ -110,6 +133,12 @@ try {
     assert(c.request && c.source && c.register && c.review_criteria.length);
     const arm = assemble(pack, { mode: 'focused', modules: c.focus });
     assert(c.focus.every(id => arm.trace.assembled_module_ids.includes(id)));
+  }
+  const report = path.join(root, 'evals/rewrite/reports/reference-loading-preparation-205-2026-10-15');
+  const retainedGenerator = crypto.createHash('sha256').update(fs.readFileSync(path.join(report, 'generator-source.js.txt'))).digest('hex');
+  for (const arm of ['full', 'focused', 'fallback']) {
+    const trace = JSON.parse(fs.readFileSync(path.join(report, `${arm}-trace.json`), 'utf8'));
+    assert.equal(trace.generator_sha256, retainedGenerator, 'historical trace must name its retained generator');
   }
   console.log(`Reference-loading preparation: lossless full arm, declared focus, fallback, ${mutations} corruption controls and ${protocol.cases.length} development cases passed. No model-quality or token-saving claim.`);
 } finally {

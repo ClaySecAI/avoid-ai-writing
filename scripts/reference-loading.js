@@ -26,12 +26,31 @@ function snapshot(commit, root = ROOT) {
   return { entry: get('SKILL.md'), reference: get('references/patterns.md') };
 }
 
+function headingsOutsideFences(text) {
+  const headings = [];
+  let offset = 0, fence = null;
+  for (const line of text.split('\n')) {
+    const marker = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+    if (fence) {
+      if (marker && marker[1][0] === fence.char && marker[1].length >= fence.length && /^\s*$/.test(marker[2])) fence = null;
+    } else if (marker && !(marker[1][0] === '`' && marker[2].includes('`'))) {
+      fence = { char: marker[1][0], length: marker[1].length };
+    } else {
+      const heading = line.match(/^(#{2,3}) (.+)$/);
+      if (heading) headings.push({ index: offset, level: heading[1].length, title: heading[2] });
+    }
+    offset += line.length + 1;
+  }
+  return headings;
+}
+
 function partition(reference) {
   assert(reference.startsWith('## What to remove or fix\n'), 'invalid catalog start');
-  const boundary = '## Context profiles\n';
-  assert.equal(reference.split(boundary).length, 2, 'invalid profile boundary');
-  const end = reference.indexOf(boundary);
-  const starts = [0, ...[...reference.slice(0, end).matchAll(/^### (.+)$/gm)].map(m => m.index), end];
+  const headings = headingsOutsideFences(reference);
+  const boundaries = headings.filter(h => h.level === 2 && h.title === 'Context profiles');
+  assert.equal(boundaries.length, 1, 'invalid profile boundary');
+  const end = boundaries[0].index;
+  const starts = [0, ...headings.filter(h => h.level === 3 && h.index < end).map(h => h.index), end];
   const modules = [];
   const add = (text, kind, id) => {
     const heading = text.split('\n', 1)[0].replace(/^#+ /, '');
@@ -40,10 +59,9 @@ function partition(reference) {
   for (let i = 0; i < starts.length - 1; i++) {
     add(reference.slice(starts[i], starts[i + 1]), i === 0 ? 'required' : 'rule', i === 0 ? 'catalog-intro' : undefined);
   }
-  const tail = reference.slice(end);
-  const headings = [...tail.matchAll(/^## (.+)$/gm)];
-  for (let i = 0; i < headings.length; i++) {
-    add(tail.slice(headings[i].index, headings[i + 1]?.index ?? tail.length), 'required');
+  const profiles = headings.filter(h => h.level === 2 && h.index >= end);
+  for (let i = 0; i < profiles.length; i++) {
+    add(reference.slice(profiles[i].index, profiles[i + 1]?.index ?? reference.length), 'required');
   }
   assert.equal(new Set(modules.map(m => m.id)).size, modules.length, 'duplicate module ID');
   assert.equal(modules.map(m => m.text).join(''), reference, 'partition is not lossless');
